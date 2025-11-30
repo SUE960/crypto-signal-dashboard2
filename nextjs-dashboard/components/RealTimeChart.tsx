@@ -51,6 +51,8 @@ const RealTimeChart: React.FC<RealTimeChartProps> = ({ dataPath }) => {
   const [timeRange, setTimeRange] = useState<'7d' | '30d' | '90d'>('30d');
   const [chartType, setChartType] = useState<'line' | 'area' | 'composed'>('composed');
   const [selectedCoin, setSelectedCoin] = useState<'btc' | 'eth' | 'both'>('both');
+  const [timelinePosition, setTimelinePosition] = useState<number>(100); // 0-100, 100 = 최신
+  const [isDragging, setIsDragging] = useState(false);
 
   useEffect(() => {
     loadRealData();
@@ -102,8 +104,19 @@ const RealTimeChart: React.FC<RealTimeChartProps> = ({ dataPath }) => {
     }
   };
 
+  // 타임라인 위치에 따라 데이터 필터링
+  const getFilteredData = () => {
+    if (data.length === 0) return [];
+    
+    // timelinePosition: 0 = 가장 오래된 데이터, 100 = 최신 데이터
+    const startIndex = Math.floor((data.length * (100 - timelinePosition)) / 100);
+    return data.slice(startIndex);
+  };
+
+  const filteredData = getFilteredData();
+
   // 데이터와 Spike 포인트 매칭
-  const dataWithSpikes = data.map((point) => {
+  const dataWithSpikes = filteredData.map((point) => {
     const spike = spikePoints.find(
       (sp) => new Date(sp.timestamp).getTime() === new Date(point.timestamp).getTime()
     );
@@ -113,6 +126,30 @@ const RealTimeChart: React.FC<RealTimeChartProps> = ({ dataPath }) => {
       spikeInfo: spike || null,
     };
   });
+
+  // 타임라인 슬라이더 핸들러
+  const handleTimelineMouseDown = (e: React.MouseEvent) => {
+    setIsDragging(true);
+    updateTimelinePosition(e);
+  };
+
+  const handleTimelineMouseMove = (e: React.MouseEvent) => {
+    if (isDragging) {
+      updateTimelinePosition(e);
+    }
+  };
+
+  const handleTimelineMouseUp = () => {
+    setIsDragging(false);
+  };
+
+  const updateTimelinePosition = (e: React.MouseEvent) => {
+    const slider = e.currentTarget as HTMLElement;
+    const rect = slider.getBoundingClientRect();
+    const x = e.clientX - rect.left;
+    const percentage = Math.max(0, Math.min(100, (x / rect.width) * 100));
+    setTimelinePosition(percentage);
+  };
 
   const generateDummyData = (range: string): ChartDataPoint[] => {
     const days = range === '7d' ? 7 : range === '30d' ? 30 : 90;
@@ -262,13 +299,16 @@ const RealTimeChart: React.FC<RealTimeChartProps> = ({ dataPath }) => {
         </div>
 
         {/* 오른쪽: 컨트롤들 */}
-        <div className="flex flex-wrap gap-3">
-          {/* 기간 */}
+        <div className="flex flex-wrap gap-3 items-center">
+          {/* 기간 선택 */}
           <div className="flex gap-2 bg-gray-800 p-1 rounded-lg">
             {(['7d', '30d', '90d'] as const).map((range) => (
               <button
                 key={range}
-                onClick={() => setTimeRange(range)}
+                onClick={() => {
+                  setTimeRange(range);
+                  setTimelinePosition(100); // 범위 변경 시 최신으로 리셋
+                }}
                 className={`px-3 py-1.5 rounded-md font-medium text-sm transition-all ${
                   timeRange === range
                     ? 'bg-blue-600 text-white shadow-lg'
@@ -349,6 +389,52 @@ const RealTimeChart: React.FC<RealTimeChartProps> = ({ dataPath }) => {
         </div>
       </div>
 
+      {/* 타임라인 슬라이더 */}
+      {data.length > 0 && (
+        <div className="bg-gray-800 rounded-lg p-4 border border-gray-700">
+          <div className="flex items-center justify-between mb-2">
+            <span className="text-sm text-gray-400 font-medium">시점 선택</span>
+            <span className="text-xs text-gray-500">
+              {filteredData.length > 0 && (
+                <>
+                  {new Date(filteredData[0].timestamp).toLocaleDateString('ko-KR', {
+                    month: 'numeric',
+                    day: 'numeric',
+                    hour: '2-digit',
+                    minute: '2-digit'
+                  })} ~ {new Date(filteredData[filteredData.length - 1].timestamp).toLocaleDateString('ko-KR', {
+                    month: 'numeric',
+                    day: 'numeric',
+                    hour: '2-digit',
+                    minute: '2-digit'
+                  })}
+                </>
+              )}
+            </span>
+          </div>
+          <div
+            className="relative w-full h-2 bg-gray-700 rounded-full cursor-pointer"
+            onMouseDown={handleTimelineMouseDown}
+            onMouseMove={handleTimelineMouseMove}
+            onMouseUp={handleTimelineMouseUp}
+            onMouseLeave={handleTimelineMouseUp}
+          >
+            <div
+              className="absolute h-full bg-gradient-to-r from-blue-500 to-purple-500 rounded-full"
+              style={{ width: `${timelinePosition}%` }}
+            />
+            <div
+              className="absolute w-4 h-4 bg-white border-2 border-blue-500 rounded-full shadow-lg transform -translate-y-1/2 top-1/2 cursor-grab active:cursor-grabbing"
+              style={{ left: `calc(${timelinePosition}% - 8px)` }}
+            />
+          </div>
+          <div className="flex justify-between mt-2 text-xs text-gray-500">
+            <span>과거</span>
+            <span>최신</span>
+          </div>
+        </div>
+      )}
+
       {/* 차트 영역 */}
       <div className="bg-gradient-to-br from-gray-900 to-gray-800 rounded-2xl p-6 border border-gray-700 shadow-2xl">
         <ResponsiveContainer width="100%" height={550}>
@@ -406,7 +492,7 @@ const RealTimeChart: React.FC<RealTimeChartProps> = ({ dataPath }) => {
               
               {/* Spike 마커들 */}
               {spikePoints.map((spike, idx) => {
-                const dataPoint = data.find(
+                const dataPoint = filteredData.find(
                   (d) => new Date(d.timestamp).getTime() === new Date(spike.timestamp).getTime()
                 );
                 if (!dataPoint) return null;
@@ -503,7 +589,7 @@ const RealTimeChart: React.FC<RealTimeChartProps> = ({ dataPath }) => {
               
               {/* Spike 마커들 */}
               {spikePoints.map((spike, idx) => {
-                const dataPoint = data.find(
+                const dataPoint = filteredData.find(
                   (d) => new Date(d.timestamp).getTime() === new Date(spike.timestamp).getTime()
                 );
                 if (!dataPoint) return null;
@@ -575,7 +661,7 @@ const RealTimeChart: React.FC<RealTimeChartProps> = ({ dataPath }) => {
               
               {/* Spike 마커들 */}
               {spikePoints.map((spike, idx) => {
-                const dataPoint = data.find(
+                const dataPoint = filteredData.find(
                   (d) => new Date(d.timestamp).getTime() === new Date(spike.timestamp).getTime()
                 );
                 if (!dataPoint) return null;
