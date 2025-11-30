@@ -1,9 +1,6 @@
 {
   "builds": [
     { "src": "nextjs-dashboard/package.json", "use": "@vercel/next" }
-  ],
-  "routes": [
-    { "src": "/(.*)", "dest": "nextjs-dashboard/$1" }
   ]
 }
 
