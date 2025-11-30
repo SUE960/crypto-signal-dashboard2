@@ -10,6 +10,7 @@ import {
   getBarColor,
   type CorrelationItem
 } from '@/lib/correlationData';
+import Tooltip from './Tooltip';
 
 type TabType = 'price' | 'whale' | 'news';
 
@@ -96,16 +97,25 @@ const CorrelationPanel: React.FC = () => {
                 <div className="flex items-center gap-3">
                   {/* 색상 동그라미 */}
                   <div
-                    className="w-3 h-3 rounded-full"
+                    className="w-3 h-3 rounded-full flex-shrink-0"
                     style={{ backgroundColor: dotColor }}
                   />
-                  <span className="text-gray-200 text-base font-medium">
-                    {item.label}
-                  </span>
+                  {/* 툴팁 적용된 라벨 */}
+                  {item.detailedAnalysis ? (
+                    <Tooltip content={item.detailedAnalysis}>
+                      <span className="text-gray-200 text-base font-medium hover:text-blue-400 transition-colors cursor-help border-b border-dashed border-gray-600 hover:border-blue-400">
+                        {item.label}
+                      </span>
+                    </Tooltip>
+                  ) : (
+                    <span className="text-gray-200 text-base font-medium">
+                      {item.label}
+                    </span>
+                  )}
                 </div>
                 {/* 상관계수 */}
                 <span
-                  className="text-lg font-bold"
+                  className="text-lg font-bold flex-shrink-0"
                   style={{ color: barColor }}
                 >
                   {sign}{(item.correlation * 100).toFixed(1)}%
