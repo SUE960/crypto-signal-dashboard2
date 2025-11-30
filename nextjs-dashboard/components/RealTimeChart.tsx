@@ -57,9 +57,12 @@ const RealTimeChart: React.FC<RealTimeChartProps> = ({ dataPath }) => {
   const [viewStartIndex, setViewStartIndex] = useState<number>(0);
 
   useEffect(() => {
-    loadRealData();
-    loadSpikePoints();
-    setViewStartIndex(0); // 범위 변경 시 리셋
+    const loadData = async () => {
+      await loadRealData();
+      await loadSpikePoints();
+      setViewStartIndex(0); // 범위 변경 시 리셋
+    };
+    loadData();
   }, [timeRange]);
 
   const loadSpikePoints = async () => {
