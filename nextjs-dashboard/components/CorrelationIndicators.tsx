@@ -59,6 +59,21 @@ export default function CorrelationIndicators({ correlations, title }: Correlati
           </div>
         )}
       </div>
+      
+      {/* 바로 거래하기 버튼 */}
+      <div className="border-t border-gray-700">
+        <a
+          href="https://whale-arbitrage-qwodzy8wpnhpgxaxt23rj8.streamlit.app/"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="w-full flex items-center justify-center gap-2 px-5 py-4 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-500 hover:to-purple-500 text-white font-semibold text-sm transition-all duration-200 hover:shadow-lg"
+        >
+          <span>바로 거래하기</span>
+          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+          </svg>
+        </a>
+      </div>
     </div>
   );
 }
