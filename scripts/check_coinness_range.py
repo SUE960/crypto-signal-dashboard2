@@ -28,3 +28,4 @@ if df['timestamp'].min() > target_start:
 else:
     print(f"\n✅ 2025년 1월 1일부터 데이터 확보!")
 
+

@@ -240,3 +240,4 @@ if __name__ == '__main__':
     print("\n컬럼 목록:")
     print(processed_data.columns.tolist())
 
+

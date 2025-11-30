@@ -56,3 +56,4 @@ with open('data/coinness_debug.html', 'w', encoding='utf-8') as f:
 print(f"\n✅ 전체 HTML을 data/coinness_debug.html에 저장했습니다.")
 print("   이 파일을 열어서 구조를 확인해보세요!")
 
+

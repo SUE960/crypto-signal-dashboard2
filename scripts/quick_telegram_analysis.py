@@ -90,3 +90,4 @@ else:
 
 print("\n💡 대시보드에서 더 자세히 확인: streamlit run app.py\n")
 
+

@@ -1,0 +1,9 @@
+{
+  "total_rows": 90600,
+  "date_range": "2015-07-31 00:00:00 ~ 2025-11-29 23:00:00",
+  "total_news": 19929.0,
+  "avg_news_per_hour": 0.21996688741721854,
+  "avg_sentiment": 0.0021899953151249523,
+  "avg_market_temp": 32.40759830551445,
+  "total_alerts": 736
+}

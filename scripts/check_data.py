@@ -124,3 +124,4 @@ print("\n📋 다음 단계:")
 print("1. 데이터 전처리 및 통합: python scripts/preprocess_data.py")
 print("2. 대시보드 실행: streamlit run app.py")
 
+
