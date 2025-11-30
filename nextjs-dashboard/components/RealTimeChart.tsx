@@ -469,6 +469,21 @@ const RealTimeChart: React.FC<RealTimeChartProps> = ({ dataPath }) => {
         </ResponsiveContainer>
       </div>
 
+      {/* 고래 거래 플로우 상세보기 버튼 */}
+      <div className="w-full">
+        <a
+          href="https://graph-visualization-kappa.vercel.app/"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="w-full flex items-center justify-center gap-2 px-6 py-3 bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 text-white font-semibold rounded-xl transition-all duration-200 shadow-lg hover:shadow-xl transform hover:scale-[1.02]"
+        >
+          <span>고래 거래 플로우 상세보기</span>
+          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+          </svg>
+        </a>
+      </div>
+
       {/* 통계 카드들 */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
         <div className="bg-gradient-to-br from-purple-900/40 to-purple-800/20 border border-purple-600/50 rounded-xl p-4 hover:shadow-lg hover:shadow-purple-500/20 transition-all">
