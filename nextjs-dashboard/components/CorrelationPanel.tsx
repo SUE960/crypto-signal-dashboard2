@@ -87,8 +87,13 @@ const CorrelationPanel: React.FC<CorrelationPanelProps> = ({ data, title }) => {
       </div>
 
       {/* 하단 버튼 */}
-      <button className="w-full mt-6 py-3 px-4 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 rounded-xl text-white font-medium transition-all flex items-center justify-center gap-2">
-        바로 거래하기
+      <a
+        href="https://whale-arbitrage-qwodzy8wpnhpgxaxt23rj8.streamlit.app/"
+        target="_blank"
+        rel="noopener noreferrer"
+        className="w-full mt-6 py-3 px-4 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 rounded-xl text-white font-medium transition-all flex items-center justify-center gap-2 cursor-pointer"
+      >
+        <span>바로 거래하기</span>
         <svg
           className="w-5 h-5"
           fill="none"
@@ -102,7 +107,7 @@ const CorrelationPanel: React.FC<CorrelationPanelProps> = ({ data, title }) => {
             d="M9 5l7 7-7 7"
           />
         </svg>
-      </button>
+      </a>
 
       {/* 범례 */}
       <div className="mt-6 pt-4 border-t border-gray-700">
