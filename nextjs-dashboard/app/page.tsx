@@ -95,11 +95,7 @@ export default function Home() {
       </div>
 
       {/* 종합 점수 헤더 */}
-      <CompositeScoreHeader
-        score={75.3}
-        change={5.2}
-        changePercent={8.45}
-      />
+      <CompositeScoreHeader />
 
       {/* 메인 컨텐츠 */}
       <div className="max-w-7xl mx-auto px-8 py-8">
