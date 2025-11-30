@@ -92,18 +92,6 @@ const RealTimeChart: React.FC<RealTimeChartProps> = ({ dataPath }) => {
     }
   };
 
-  const loadSpikePoints = async () => {
-    try {
-      const response = await fetch(`/api/spike-points?range=${timeRange}`);
-      if (response.ok) {
-        const spikes = await response.json();
-        setSpikePoints(spikes);
-      }
-    } catch (error) {
-      console.error('Spike points 로딩 실패:', error);
-    }
-  };
-
   // 타임라인 위치에 따라 데이터 필터링
   const getFilteredData = () => {
     if (data.length === 0) return [];
