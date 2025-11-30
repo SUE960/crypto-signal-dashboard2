@@ -15,7 +15,13 @@ import Tooltip from './Tooltip';
 type TabType = 'price' | 'whale' | 'news';
 
 const CorrelationPanel: React.FC = () => {
+  // URL이나 props로 탭을 받을 수 있도록 (기본값은 price)
   const [activeTab, setActiveTab] = useState<TabType>('price');
+  
+  // 부모 컴포넌트에서 탭을 제어할 수 있도록 (선택사항)
+  React.useEffect(() => {
+    // URL 파라미터나 다른 방법으로 탭 설정 가능
+  }, []);
 
   const getTabData = (): CorrelationItem[] => {
     switch (activeTab) {
