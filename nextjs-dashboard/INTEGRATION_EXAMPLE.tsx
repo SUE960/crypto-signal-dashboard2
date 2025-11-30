@@ -1,6 +1,7 @@
-// app/page.tsx에 추가할 내용
+// app/page.tsx에 추가할 내용 (예제)
 
 import CorrelationPanel from '@/components/CorrelationPanel';
+import { priceCorrelations } from '@/lib/correlationData';
 
 export default function Home() {
   return (
@@ -18,8 +19,11 @@ export default function Home() {
 
         {/* 그리드 레이아웃 */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          {/* 상관관계 패널 */}
-          <CorrelationPanel />
+          {/* 상관관계 패널 - 필수 props 전달 */}
+          <CorrelationPanel 
+            data={priceCorrelations} 
+            title="코인 가격과의 상관관계" 
+          />
 
           {/* 여기에 다른 컴포넌트들 추가 가능 */}
           {/* 예: 가격 차트, 뉴스 피드 등 */}
