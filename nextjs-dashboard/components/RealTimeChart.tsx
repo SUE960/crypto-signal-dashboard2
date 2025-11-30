@@ -13,7 +13,9 @@ import {
   Area,
   AreaChart,
   ComposedChart,
-  Bar
+  Bar,
+  ReferenceLine,
+  Cell
 } from 'recharts';
 
 interface RealTimeChartProps {
@@ -33,8 +35,18 @@ interface ChartDataPoint {
   eth_volatility?: number;
 }
 
+interface SpikePoint {
+  timestamp: string;
+  date: string;
+  priorityScore: number;
+  alertLevel: string;
+  reasons: string[];
+  details: any;
+}
+
 const RealTimeChart: React.FC<RealTimeChartProps> = ({ dataPath }) => {
   const [data, setData] = useState<ChartDataPoint[]>([]);
+  const [spikePoints, setSpikePoints] = useState<SpikePoint[]>([]);
   const [loading, setLoading] = useState(true);
   const [timeRange, setTimeRange] = useState<'7d' | '30d' | '90d'>('30d');
   const [chartType, setChartType] = useState<'line' | 'area' | 'composed'>('composed');
@@ -42,7 +54,20 @@ const RealTimeChart: React.FC<RealTimeChartProps> = ({ dataPath }) => {
 
   useEffect(() => {
     loadRealData();
+    loadSpikePoints();
   }, [timeRange]);
+
+  const loadSpikePoints = async () => {
+    try {
+      const response = await fetch(`/api/spike-points?range=${timeRange}`);
+      if (response.ok) {
+        const spikes = await response.json();
+        setSpikePoints(spikes);
+      }
+    } catch (error) {
+      console.error('Spike points 로딩 실패:', error);
+    }
+  };
 
   const loadRealData = async () => {
     setLoading(true);
@@ -64,6 +89,30 @@ const RealTimeChart: React.FC<RealTimeChartProps> = ({ dataPath }) => {
       setLoading(false);
     }
   };
+
+  const loadSpikePoints = async () => {
+    try {
+      const response = await fetch(`/api/spike-points?range=${timeRange}`);
+      if (response.ok) {
+        const spikes = await response.json();
+        setSpikePoints(spikes);
+      }
+    } catch (error) {
+      console.error('Spike points 로딩 실패:', error);
+    }
+  };
+
+  // 데이터와 Spike 포인트 매칭
+  const dataWithSpikes = data.map((point) => {
+    const spike = spikePoints.find(
+      (sp) => new Date(sp.timestamp).getTime() === new Date(point.timestamp).getTime()
+    );
+    return {
+      ...point,
+      isSpike: !!spike,
+      spikeInfo: spike || null,
+    };
+  });
 
   const generateDummyData = (range: string): ChartDataPoint[] => {
     const days = range === '7d' ? 7 : range === '30d' ? 30 : 90;
@@ -99,7 +148,7 @@ const RealTimeChart: React.FC<RealTimeChartProps> = ({ dataPath }) => {
     return dataPoints;
   };
 
-  const CustomTooltip = ({ active, payload, label }: any) => {
+  const CustomTooltip = ({ active, payload, label, spikePoints }: any) => {
     if (!active || !payload || !payload.length) return null;
 
     // 고래 거래 중복 제거 (Area와 Bar가 모두 있을 경우 하나만 표시)
@@ -114,11 +163,52 @@ const RealTimeChart: React.FC<RealTimeChartProps> = ({ dataPath }) => {
       return true;
     });
 
+    // 해당 시점의 Spike 정보 찾기
+    const spike = spikePoints?.find((sp: any) => sp.date === label);
+
     return (
-      <div className="bg-gray-950 border-2 border-gray-700 rounded-xl p-4 shadow-2xl backdrop-blur-sm">
+      <div className="bg-gray-950 border-2 border-gray-700 rounded-xl p-4 shadow-2xl backdrop-blur-sm max-w-md">
         <p className="text-gray-300 font-semibold mb-3 text-sm border-b border-gray-700 pb-2">
           📅 {label}
         </p>
+        
+        {/* Spike 알람 표시 */}
+        {spike && (
+          <div className="mb-4 p-3 bg-gradient-to-r from-yellow-900/40 to-orange-900/40 border border-yellow-500/50 rounded-lg">
+            <div className="flex items-center gap-2 mb-2">
+              <span className="text-2xl">⭐</span>
+              <span className="text-yellow-400 font-bold text-sm">SPIKE! 구매 시점</span>
+              <span className={`ml-auto px-2 py-0.5 rounded text-xs font-bold ${
+                spike.alertLevel === 'CRITICAL' ? 'bg-red-500 text-white' :
+                spike.alertLevel === 'HIGH' ? 'bg-orange-500 text-white' :
+                'bg-yellow-500 text-black'
+              }`}>
+                {spike.alertLevel}
+              </span>
+            </div>
+            <div className="text-xs text-gray-300 space-y-1">
+              <div className="font-semibold text-yellow-300 mb-2">📊 Spike 감지 로직:</div>
+              {spike.reasons.map((reason: string, idx: number) => (
+                <div key={idx} className="flex items-start gap-2">
+                  <span className="text-yellow-400">•</span>
+                  <span>{reason}</span>
+                </div>
+              ))}
+              <div className="mt-2 pt-2 border-t border-yellow-500/30">
+                <div className="text-yellow-300 font-semibold">우선순위 점수: {spike.priorityScore}점</div>
+                {spike.details.whale_zscore && (
+                  <div className="text-gray-400">고래 Z-score: {spike.details.whale_zscore.toFixed(2)}</div>
+                )}
+                {spike.details.telegram_zscore && (
+                  <div className="text-gray-400">텔레그램 Z-score: {spike.details.telegram_zscore.toFixed(2)}</div>
+                )}
+                {spike.details.twitter_zscore && (
+                  <div className="text-gray-400">트위터 Z-score: {spike.details.twitter_zscore.toFixed(2)}</div>
+                )}
+              </div>
+            </div>
+          </div>
+        )}
         
         <div className="space-y-2">
           {uniquePayload.map((entry: any, index: number) => (
@@ -263,7 +353,7 @@ const RealTimeChart: React.FC<RealTimeChartProps> = ({ dataPath }) => {
       <div className="bg-gradient-to-br from-gray-900 to-gray-800 rounded-2xl p-6 border border-gray-700 shadow-2xl">
         <ResponsiveContainer width="100%" height={550}>
           {chartType === 'composed' ? (
-            <ComposedChart data={data} margin={{ top: 10, right: 30, left: 20, bottom: 10 }}>
+            <ComposedChart data={dataWithSpikes} margin={{ top: 10, right: 30, left: 20, bottom: 10 }}>
               <defs>
                 <linearGradient id="whaleGradient" x1="0" y1="0" x2="0" y2="1">
                   <stop offset="5%" stopColor="#a855f7" stopOpacity={0.3} />
@@ -308,11 +398,37 @@ const RealTimeChart: React.FC<RealTimeChartProps> = ({ dataPath }) => {
                 }}
               />
               
-              <Tooltip content={<CustomTooltip />} />
+              <Tooltip content={<CustomTooltip spikePoints={spikePoints} />} />
               <Legend
                 wrapperStyle={{ paddingTop: '20px' }}
                 iconType="line"
               />
+              
+              {/* Spike 마커들 */}
+              {spikePoints.map((spike, idx) => {
+                const dataPoint = data.find(
+                  (d) => new Date(d.timestamp).getTime() === new Date(spike.timestamp).getTime()
+                );
+                if (!dataPoint) return null;
+                
+                return (
+                  <ReferenceLine
+                    key={idx}
+                    x={dataPoint.date}
+                    stroke="#ffd700"
+                    strokeWidth={2}
+                    strokeDasharray="0"
+                    label={{
+                      value: '⭐ SPIKE!',
+                      position: 'top',
+                      fill: '#ffd700',
+                      fontSize: 12,
+                      fontWeight: 'bold',
+                      offset: 10,
+                    }}
+                  />
+                );
+              })}
 
               {/* 고래 거래 (영역 + 바) */}
               <Area
@@ -362,7 +478,7 @@ const RealTimeChart: React.FC<RealTimeChartProps> = ({ dataPath }) => {
               )}
             </ComposedChart>
           ) : chartType === 'area' ? (
-            <AreaChart data={data} margin={{ top: 10, right: 30, left: 20, bottom: 10 }}>
+            <AreaChart data={dataWithSpikes} margin={{ top: 10, right: 30, left: 20, bottom: 10 }}>
               <defs>
                 <linearGradient id="colorWhale" x1="0" y1="0" x2="0" y2="1">
                   <stop offset="5%" stopColor="#a855f7" stopOpacity={0.8} />
@@ -382,8 +498,34 @@ const RealTimeChart: React.FC<RealTimeChartProps> = ({ dataPath }) => {
               <XAxis dataKey="date" stroke="#9ca3af" style={{ fontSize: '11px' }} />
               <YAxis yAxisId="left" stroke="#a855f7" style={{ fontSize: '11px' }} />
               <YAxis yAxisId="right" orientation="right" stroke="#60a5fa" style={{ fontSize: '11px' }} />
-              <Tooltip content={<CustomTooltip />} />
+              <Tooltip content={<CustomTooltip spikePoints={spikePoints} />} />
               <Legend wrapperStyle={{ paddingTop: '20px' }} />
+              
+              {/* Spike 마커들 */}
+              {spikePoints.map((spike, idx) => {
+                const dataPoint = data.find(
+                  (d) => new Date(d.timestamp).getTime() === new Date(spike.timestamp).getTime()
+                );
+                if (!dataPoint) return null;
+                
+                return (
+                  <ReferenceLine
+                    key={idx}
+                    x={dataPoint.date}
+                    stroke="#ffd700"
+                    strokeWidth={2}
+                    strokeDasharray="0"
+                    label={{
+                      value: '⭐ SPIKE!',
+                      position: 'top',
+                      fill: '#ffd700',
+                      fontSize: 12,
+                      fontWeight: 'bold',
+                      offset: 10,
+                    }}
+                  />
+                );
+              })}
 
               <Area
                 yAxisId="left"
@@ -423,13 +565,39 @@ const RealTimeChart: React.FC<RealTimeChartProps> = ({ dataPath }) => {
               )}
             </AreaChart>
           ) : (
-            <LineChart data={data} margin={{ top: 10, right: 30, left: 20, bottom: 10 }}>
+            <LineChart data={dataWithSpikes} margin={{ top: 10, right: 30, left: 20, bottom: 10 }}>
               <CartesianGrid strokeDasharray="3 3" stroke="#374151" opacity={0.5} />
               <XAxis dataKey="date" stroke="#9ca3af" style={{ fontSize: '11px' }} />
               <YAxis yAxisId="left" stroke="#a855f7" style={{ fontSize: '11px' }} />
               <YAxis yAxisId="right" orientation="right" stroke="#60a5fa" style={{ fontSize: '11px' }} />
-              <Tooltip content={<CustomTooltip />} />
+              <Tooltip content={<CustomTooltip spikePoints={spikePoints} />} />
               <Legend wrapperStyle={{ paddingTop: '20px' }} />
+              
+              {/* Spike 마커들 */}
+              {spikePoints.map((spike, idx) => {
+                const dataPoint = data.find(
+                  (d) => new Date(d.timestamp).getTime() === new Date(spike.timestamp).getTime()
+                );
+                if (!dataPoint) return null;
+                
+                return (
+                  <ReferenceLine
+                    key={idx}
+                    x={dataPoint.date}
+                    stroke="#ffd700"
+                    strokeWidth={2}
+                    strokeDasharray="0"
+                    label={{
+                      value: '⭐ SPIKE!',
+                      position: 'top',
+                      fill: '#ffd700',
+                      fontSize: 12,
+                      fontWeight: 'bold',
+                      offset: 10,
+                    }}
+                  />
+                );
+              })}
 
               <Line
                 yAxisId="left"
