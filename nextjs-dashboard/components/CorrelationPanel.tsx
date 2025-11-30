@@ -1,10 +1,7 @@
 'use client';
 
-import React, { useState } from 'react';
+import React from 'react';
 import {
-  priceCorrelations,
-  whaleCorrelations,
-  newsCorrelations,
   getCorrelationPercentage,
   getSignificanceColor,
   getBarColor,
@@ -12,78 +9,19 @@ import {
 } from '@/lib/correlationData';
 import Tooltip from './Tooltip';
 
-type TabType = 'price' | 'whale' | 'news';
-
 interface CorrelationPanelProps {
-  defaultTab?: TabType;
+  data: CorrelationItem[];
+  title: string;
 }
 
-const CorrelationPanel: React.FC<CorrelationPanelProps> = ({ defaultTab = 'price' }) => {
-  const [activeTab, setActiveTab] = useState<TabType>(defaultTab);
-
-  const getTabData = (): CorrelationItem[] => {
-    switch (activeTab) {
-      case 'price':
-        return priceCorrelations;
-      case 'whale':
-        return whaleCorrelations;
-      case 'news':
-        return newsCorrelations;
-    }
-  };
-
-  const getTabTitle = (): string => {
-    switch (activeTab) {
-      case 'price':
-        return '코인 가격과의 상관관계';
-      case 'whale':
-        return '고래 거래와의 상관관계';
-      case 'news':
-        return '뉴스 기반 지표';
-    }
-  };
-
-  const tabData = getTabData();
+const CorrelationPanel: React.FC<CorrelationPanelProps> = ({ data, title }) => {
+  const tabData = data;
 
   return (
     <div className="rounded-2xl bg-gradient-to-br from-gray-900 to-gray-800 p-6 shadow-2xl border border-gray-700">
-      {/* 탭 헤더 */}
-      <div className="flex gap-6 mb-6 border-b border-gray-700">
-        <button
-          onClick={() => setActiveTab('price')}
-          className={`pb-3 px-4 text-base font-medium transition-all ${
-            activeTab === 'price'
-              ? 'text-blue-400 border-b-2 border-blue-400'
-              : 'text-gray-400 hover:text-gray-200'
-          }`}
-        >
-          코인가격 관계
-        </button>
-        <button
-          onClick={() => setActiveTab('whale')}
-          className={`pb-3 px-4 text-base font-medium transition-all ${
-            activeTab === 'whale'
-              ? 'text-blue-400 border-b-2 border-blue-400'
-              : 'text-gray-400 hover:text-gray-200'
-          }`}
-        >
-          고래지갑 관계
-        </button>
-        <button
-          onClick={() => setActiveTab('news')}
-          className={`pb-3 px-4 text-base font-medium transition-all ${
-            activeTab === 'news'
-              ? 'text-blue-400 border-b-2 border-blue-400'
-              : 'text-gray-400 hover:text-gray-200'
-          }`}
-        >
-          지금 뉴스
-        </button>
-      </div>
-
       {/* 제목 */}
       <h3 className="text-xl font-bold text-white mb-6">
-        {getTabTitle()}
+        {title}
       </h3>
 
       {/* 상관관계 리스트 */}

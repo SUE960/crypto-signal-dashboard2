@@ -6,6 +6,11 @@ import UpbitStyleTabs from '../components/UpbitStyleTabs';
 import CorrelationPanel from '../components/CorrelationPanel';
 import RealTimeChart from '../components/RealTimeChart';
 import NewsListPanel from '../components/NewsListPanel';
+import {
+  priceCorrelations,
+  whaleCorrelations,
+  newsCorrelations
+} from '../lib/correlationData';
 
 export default function Home() {
   // const [data, setData] = useState<any>(null);
@@ -45,12 +50,17 @@ export default function Home() {
     {
       id: 'price',
       label: '코인가격 관계',
-      content: <CorrelationPanel defaultTab="price" />
+      content: <CorrelationPanel data={priceCorrelations} title="코인 가격과의 상관관계" />
     },
     {
       id: 'whale',
       label: '고래지갑 관계',
-      content: <CorrelationPanel defaultTab="whale" />
+      content: <CorrelationPanel data={whaleCorrelations} title="고래 거래와의 상관관계" />
+    },
+    {
+      id: 'news-correlation',
+      label: '뉴스와의 관계',
+      content: <CorrelationPanel data={newsCorrelations} title="뉴스와의 상관관계" />
     },
     {
       id: 'news',
