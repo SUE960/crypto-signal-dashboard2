@@ -50,27 +50,27 @@ export default function Home() {
   const tabs = [
     {
       id: 'price',
-      label: '코인가격\n관계',
+      label: '코인가격',
       content: <CorrelationPanel data={priceCorrelations} title="코인 가격과의 상관관계" />
     },
     {
       id: 'whale',
-      label: '고래지갑\n관계',
+      label: '고래지갑',
       content: <CorrelationPanel data={whaleCorrelations} title="고래 거래와의 상관관계" />
     },
     {
       id: 'news-correlation',
-      label: '뉴스와의\n관계',
+      label: '뉴스',
       content: <CorrelationPanel data={newsCorrelations} title="뉴스와의 상관관계" />
     },
     {
       id: 'spike',
-      label: 'Spike\n알람',
+      label: 'spike\n알람',
       content: <SpikeAlarmList />
     },
     {
       id: 'news',
-      label: '지금 뉴스',
+      label: '지금뉴스',
       content: <NewsListPanel />
     },
   ];
