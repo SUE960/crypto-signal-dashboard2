@@ -51,12 +51,15 @@ const RealTimeChart: React.FC<RealTimeChartProps> = ({ dataPath }) => {
   const [timeRange, setTimeRange] = useState<'7d' | '30d' | '90d'>('30d');
   const [chartType, setChartType] = useState<'line' | 'area' | 'composed'>('composed');
   const [selectedCoin, setSelectedCoin] = useState<'btc' | 'eth' | 'both'>('both');
-  const [timelinePosition, setTimelinePosition] = useState<number>(100); // 0-100, 100 = 최신
+  const [selectedDate, setSelectedDate] = useState<string>('');
   const [isDragging, setIsDragging] = useState(false);
+  const [dragStartX, setDragStartX] = useState<number>(0);
+  const [viewStartIndex, setViewStartIndex] = useState<number>(0);
 
   useEffect(() => {
     loadRealData();
     loadSpikePoints();
+    setViewStartIndex(0); // 범위 변경 시 리셋
   }, [timeRange]);
 
   const loadSpikePoints = async () => {
@@ -92,13 +95,27 @@ const RealTimeChart: React.FC<RealTimeChartProps> = ({ dataPath }) => {
     }
   };
 
-  // 타임라인 위치에 따라 데이터 필터링
+  // 선택된 날짜 또는 드래그 위치에 따라 데이터 필터링
   const getFilteredData = () => {
     if (data.length === 0) return [];
     
-    // timelinePosition: 0 = 가장 오래된 데이터, 100 = 최신 데이터
-    const startIndex = Math.floor((data.length * (100 - timelinePosition)) / 100);
-    return data.slice(startIndex);
+    // 날짜가 선택된 경우
+    if (selectedDate) {
+      const selectedTimestamp = new Date(selectedDate).getTime();
+      const selectedIndex = data.findIndex(
+        (d) => new Date(d.timestamp).getTime() >= selectedTimestamp
+      );
+      if (selectedIndex >= 0) {
+        return data.slice(selectedIndex);
+      }
+    }
+    
+    // 드래그로 이동한 경우
+    if (viewStartIndex > 0) {
+      return data.slice(viewStartIndex);
+    }
+    
+    return data;
   };
 
   const filteredData = getFilteredData();
@@ -115,28 +132,31 @@ const RealTimeChart: React.FC<RealTimeChartProps> = ({ dataPath }) => {
     };
   });
 
-  // 타임라인 슬라이더 핸들러
-  const handleTimelineMouseDown = (e: React.MouseEvent) => {
+  // 차트 드래그 핸들러
+  const handleChartMouseDown = (e: React.MouseEvent) => {
     setIsDragging(true);
-    updateTimelinePosition(e);
+    setDragStartX(e.clientX);
   };
 
-  const handleTimelineMouseMove = (e: React.MouseEvent) => {
-    if (isDragging) {
-      updateTimelinePosition(e);
+  const handleChartMouseMove = (e: React.MouseEvent) => {
+    if (isDragging && data.length > 0) {
+      const deltaX = e.clientX - dragStartX;
+      const pixelsPerDataPoint = 800 / data.length; // 대략적인 픽셀당 데이터 포인트
+      const deltaIndex = Math.round(deltaX / pixelsPerDataPoint);
+      const newStartIndex = Math.max(0, Math.min(data.length - 1, viewStartIndex - deltaIndex));
+      setViewStartIndex(newStartIndex);
+      setDragStartX(e.clientX);
     }
   };
 
-  const handleTimelineMouseUp = () => {
+  const handleChartMouseUp = () => {
     setIsDragging(false);
   };
 
-  const updateTimelinePosition = (e: React.MouseEvent) => {
-    const slider = e.currentTarget as HTMLElement;
-    const rect = slider.getBoundingClientRect();
-    const x = e.clientX - rect.left;
-    const percentage = Math.max(0, Math.min(100, (x / rect.width) * 100));
-    setTimelinePosition(percentage);
+  // 날짜 선택 핸들러
+  const handleDateChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setSelectedDate(e.target.value);
+    setViewStartIndex(0); // 날짜 선택 시 드래그 위치 리셋
   };
 
   const generateDummyData = (range: string): ChartDataPoint[] => {
@@ -295,7 +315,8 @@ const RealTimeChart: React.FC<RealTimeChartProps> = ({ dataPath }) => {
                 key={range}
                 onClick={() => {
                   setTimeRange(range);
-                  setTimelinePosition(100); // 범위 변경 시 최신으로 리셋
+                  setSelectedDate(''); // 범위 변경 시 날짜 선택 리셋
+                  setViewStartIndex(0); // 범위 변경 시 드래그 위치 리셋
                 }}
                 className={`px-3 py-1.5 rounded-md font-medium text-sm transition-all ${
                   timeRange === range
@@ -374,57 +395,37 @@ const RealTimeChart: React.FC<RealTimeChartProps> = ({ dataPath }) => {
               복합
             </button>
           </div>
+
+          {/* 날짜 선택 캘린더 */}
+          <div className="flex items-center gap-2 bg-gray-800 px-3 py-1.5 rounded-lg">
+            <svg className="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+            </svg>
+            <input
+              type="date"
+              value={selectedDate}
+              onChange={handleDateChange}
+              className="bg-transparent text-gray-300 text-sm border-none outline-none cursor-pointer"
+              style={{ colorScheme: 'dark' }}
+            />
+          </div>
         </div>
       </div>
 
-      {/* 타임라인 슬라이더 */}
-      {data.length > 0 && (
-        <div className="bg-gray-800 rounded-lg p-4 border border-gray-700">
-          <div className="flex items-center justify-between mb-2">
-            <span className="text-sm text-gray-400 font-medium">시점 선택</span>
-            <span className="text-xs text-gray-500">
-              {filteredData.length > 0 && (
-                <>
-                  {new Date(filteredData[0].timestamp).toLocaleDateString('ko-KR', {
-                    month: 'numeric',
-                    day: 'numeric',
-                    hour: '2-digit',
-                    minute: '2-digit'
-                  })} ~ {new Date(filteredData[filteredData.length - 1].timestamp).toLocaleDateString('ko-KR', {
-                    month: 'numeric',
-                    day: 'numeric',
-                    hour: '2-digit',
-                    minute: '2-digit'
-                  })}
-                </>
-              )}
-            </span>
-          </div>
-          <div
-            className="relative w-full h-2 bg-gray-700 rounded-full cursor-pointer"
-            onMouseDown={handleTimelineMouseDown}
-            onMouseMove={handleTimelineMouseMove}
-            onMouseUp={handleTimelineMouseUp}
-            onMouseLeave={handleTimelineMouseUp}
-          >
-            <div
-              className="absolute h-full bg-gradient-to-r from-blue-500 to-purple-500 rounded-full"
-              style={{ width: `${timelinePosition}%` }}
-            />
-            <div
-              className="absolute w-4 h-4 bg-white border-2 border-blue-500 rounded-full shadow-lg transform -translate-y-1/2 top-1/2 cursor-grab active:cursor-grabbing"
-              style={{ left: `calc(${timelinePosition}% - 8px)` }}
-            />
-          </div>
-          <div className="flex justify-between mt-2 text-xs text-gray-500">
-            <span>과거</span>
-            <span>최신</span>
-          </div>
-        </div>
-      )}
-
       {/* 차트 영역 */}
-      <div className="bg-gradient-to-br from-gray-900 to-gray-800 rounded-2xl p-6 border border-gray-700 shadow-2xl">
+      <div 
+        className="bg-gradient-to-br from-gray-900 to-gray-800 rounded-2xl p-6 border border-gray-700 shadow-2xl"
+        onMouseDown={handleChartMouseDown}
+        onMouseMove={handleChartMouseMove}
+        onMouseUp={handleChartMouseUp}
+        onMouseLeave={handleChartMouseUp}
+        style={{ cursor: isDragging ? 'grabbing' : 'grab' }}
+      >
+        {isDragging && (
+          <div className="absolute inset-0 flex items-center justify-center bg-black/20 rounded-2xl z-10 pointer-events-none">
+            <div className="text-white text-sm font-medium">드래그 중...</div>
+          </div>
+        )}
         <ResponsiveContainer width="100%" height={550}>
           {chartType === 'composed' ? (
             <ComposedChart data={dataWithSpikes} margin={{ top: 10, right: 30, left: 20, bottom: 10 }}>
