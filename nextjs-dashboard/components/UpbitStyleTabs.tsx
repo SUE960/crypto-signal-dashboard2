@@ -32,7 +32,11 @@ export default function UpbitStyleTabs({ tabs }: UpbitStyleTabsProps) {
               }
             `}
           >
-            {tab.label}
+            <div className="flex flex-col items-center">
+              {tab.label.split('\n').map((line, idx) => (
+                <span key={idx}>{line}</span>
+              ))}
+            </div>
             {activeTab === tab.id && (
               <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-gradient-to-r from-blue-500 to-purple-500" />
             )}

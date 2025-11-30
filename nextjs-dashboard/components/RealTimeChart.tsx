@@ -102,6 +102,18 @@ const RealTimeChart: React.FC<RealTimeChartProps> = ({ dataPath }) => {
   const CustomTooltip = ({ active, payload, label }: any) => {
     if (!active || !payload || !payload.length) return null;
 
+    // 고래 거래 중복 제거 (Area와 Bar가 모두 있을 경우 하나만 표시)
+    const seenNames = new Set<string>();
+    const uniquePayload = payload.filter((entry: any) => {
+      if (entry.name === '고래 거래') {
+        if (seenNames.has('고래 거래')) {
+          return false; // 이미 표시된 고래 거래는 제외
+        }
+        seenNames.add('고래 거래');
+      }
+      return true;
+    });
+
     return (
       <div className="bg-gray-950 border-2 border-gray-700 rounded-xl p-4 shadow-2xl backdrop-blur-sm">
         <p className="text-gray-300 font-semibold mb-3 text-sm border-b border-gray-700 pb-2">
@@ -109,7 +121,7 @@ const RealTimeChart: React.FC<RealTimeChartProps> = ({ dataPath }) => {
         </p>
         
         <div className="space-y-2">
-          {payload.map((entry: any, index: number) => (
+          {uniquePayload.map((entry: any, index: number) => (
             <div key={index} className="flex items-center justify-between gap-4">
               <div className="flex items-center gap-2">
                 <div

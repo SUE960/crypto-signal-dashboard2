@@ -49,17 +49,17 @@ export default function Home() {
   const tabs = [
     {
       id: 'price',
-      label: '코인가격 관계',
+      label: '코인가격\n관계',
       content: <CorrelationPanel data={priceCorrelations} title="코인 가격과의 상관관계" />
     },
     {
       id: 'whale',
-      label: '고래지갑 관계',
+      label: '고래지갑\n관계',
       content: <CorrelationPanel data={whaleCorrelations} title="고래 거래와의 상관관계" />
     },
     {
       id: 'news-correlation',
-      label: '뉴스와의 관계',
+      label: '뉴스와의\n관계',
       content: <CorrelationPanel data={newsCorrelations} title="뉴스와의 상관관계" />
     },
     {
@@ -101,8 +101,23 @@ export default function Home() {
       <div className="max-w-7xl mx-auto px-8 py-8">
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
           {/* 왼쪽: 차트 영역 */}
-          <div className="lg:col-span-8">
+          <div className="lg:col-span-8 space-y-4">
             <RealTimeChart />
+            
+            {/* 고래 거래 플로우 상세보기 버튼 */}
+            <div className="flex justify-center">
+              <a
+                href="https://graph-visualization-kappa.vercel.app/"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 text-white font-semibold rounded-xl transition-all duration-200 shadow-lg hover:shadow-xl transform hover:scale-105"
+              >
+                <span>고래 거래 플로우 상세보기</span>
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                </svg>
+              </a>
+            </div>
           </div>
 
           {/* 오른쪽: 탭 + 지표 */}
