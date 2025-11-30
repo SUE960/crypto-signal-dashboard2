@@ -70,3 +70,4 @@ nextjs-dashboard/
 - Plotly.js로 차트 렌더링
 - 완전한 SSR/SSG 지원 (Vercel 최적화)
 
+
