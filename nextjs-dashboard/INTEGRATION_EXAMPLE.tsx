@@ -1,0 +1,31 @@
+// app/page.tsx에 추가할 내용
+
+import CorrelationPanel from '@/components/CorrelationPanel';
+
+export default function Home() {
+  return (
+    <main className="min-h-screen bg-gray-950 p-8">
+      <div className="max-w-7xl mx-auto">
+        {/* 헤더 */}
+        <div className="mb-8">
+          <h1 className="text-3xl font-bold text-white mb-2">
+            암호화폐 시장 분석 대시보드
+          </h1>
+          <p className="text-gray-400">
+            실시간 상관관계 분석 및 시장 신호
+          </p>
+        </div>
+
+        {/* 그리드 레이아웃 */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          {/* 상관관계 패널 */}
+          <CorrelationPanel />
+
+          {/* 여기에 다른 컴포넌트들 추가 가능 */}
+          {/* 예: 가격 차트, 뉴스 피드 등 */}
+        </div>
+      </div>
+    </main>
+  );
+}
+
