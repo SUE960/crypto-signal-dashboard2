@@ -4,6 +4,7 @@
 import CompositeScoreHeader from '../components/CompositeScoreHeader';
 import UpbitStyleTabs from '../components/UpbitStyleTabs';
 import CorrelationIndicators from '../components/CorrelationIndicators';
+import NewsList from '../components/NewsList';
 
 export default function Home() {
   // const [data, setData] = useState<any>(null);
@@ -72,17 +73,7 @@ export default function Home() {
     {
       id: 'news',
       label: '지금 뉴스',
-      content: (
-        <div className="px-5 py-12 text-center text-gray-400">
-          <div className="inline-flex items-center justify-center w-16 h-16 mb-4 rounded-full bg-gray-700">
-            <svg className="w-8 h-8 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 20H5a2 2 0 01-2-2V6a2 2 0 012-2h10a2 2 0 012 2v1m2 13a2 2 0 01-2-2V7m2 13a2 2 0 002-2V9a2 2 0 00-2-2h-2m-4-3H9M7 16h6M7 8h6v4H7V8z" />
-            </svg>
-          </div>
-          <p className="font-semibold mb-1">뉴스 데이터 수집 중</p>
-          <p className="text-sm text-gray-500">코인니스 API 연결 대기 중...</p>
-        </div>
-      )
+      content: <NewsList />
     },
   ];
 
