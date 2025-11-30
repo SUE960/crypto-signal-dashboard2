@@ -1,0 +1,15 @@
+variable_1,variable_2,description,correlation,p_value,n_samples,significance
+whale_tx_count,eth_close,고래 거래 빈도 vs ETH 가격,0.13275024839446292,9.47651486608203e-33,7992,***
+whale_tx_count,btc_close,고래 거래 빈도 vs BTC 가격,0.09010082959736801,7.030374001199506e-16,7992,***
+whale_tx_count,eth_volatility,고래 거래 빈도 vs ETH 변동성,0.07464256703956783,5.977502173066359e-11,7668,***
+telegram_message_count,eth_close,텔레그램 메시지 수 vs ETH 가격,0.0710901464665334,1.986610693605356e-10,7992,***
+telegram_message_count,btc_close,텔레그램 메시지 수 vs BTC 가격,0.06748119469340454,1.554348456486527e-09,7992,***
+twitter_engagement,eth_close,트위터 인게이지먼트 vs ETH 가격,0.061568260154925426,3.6202030813508295e-08,7992,***
+whale_tx_count,btc_volatility,고래 거래 빈도 vs BTC 변동성,0.041779340265138465,0.00025271010761007093,7668,***
+twitter_engagement,btc_close,트위터 인게이지먼트 vs BTC 가격,0.024999311349132212,0.025424717461177415,7992,*
+telegram_avg_sentiment,eth_price_change,텔레그램 감정 vs ETH 변화율,-0.009853331420293612,0.3803688624902846,7928,
+twitter_sentiment,btc_price_change,트위터 감정 vs BTC 변화율,-0.009525496316328588,0.4042791884231561,7668,
+whale_volume_sum,btc_price_change,고래 거래량 vs BTC 변화율,0.007816949189104886,0.4937184703164895,7668,
+telegram_avg_sentiment,btc_price_change,텔레그램 감정 vs BTC 변화율,-0.007712835516634032,0.49230486688204994,7928,
+whale_volume_sum,eth_price_change,고래 거래량 vs ETH 변화율,0.006493486583541227,0.5696756885640283,7668,
+twitter_sentiment,eth_price_change,트위터 감정 vs ETH 변화율,-0.006370444489508936,0.5770605898513834,7666,

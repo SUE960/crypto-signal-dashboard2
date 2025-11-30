@@ -1,0 +1,20 @@
+{
+  "spike_threshold": 2.0,
+  "window_hours": 24,
+  "check_interval_seconds": 60,
+  "alert_cooldown_hours": 1,
+  "critical_priority_threshold": 10,
+  "telegram_weight": 0.3,
+  "whale_weight": 0.5,
+  "twitter_weight": 0.2,
+  "description": {
+    "spike_threshold": "스파이크 판단 Z-score 임계값",
+    "window_hours": "이동평균 계산 윈도우 (시간)",
+    "check_interval_seconds": "모니터링 체크 간격 (초)",
+    "alert_cooldown_hours": "동일 레벨 알람 재전송 방지 시간 (시간)",
+    "critical_priority_threshold": "CRITICAL 알람 최소 우선순위 점수",
+    "telegram_weight": "텔레그램 가중치",
+    "whale_weight": "고래 거래 가중치",
+    "twitter_weight": "트위터 가중치"
+  }
+}

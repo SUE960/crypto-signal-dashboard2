@@ -1,0 +1,10 @@
+click
+numpy
+pandas
+scipy
+statsmodels
+plotly
+vaderSentiment
+streamlit
+scikit-learn
+
