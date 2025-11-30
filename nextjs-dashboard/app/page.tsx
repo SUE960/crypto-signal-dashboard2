@@ -6,6 +6,7 @@ import UpbitStyleTabs from '../components/UpbitStyleTabs';
 import CorrelationPanel from '../components/CorrelationPanel';
 import RealTimeChart from '../components/RealTimeChart';
 import NewsListPanel from '../components/NewsListPanel';
+import SpikeAlarmList from '../components/SpikeAlarmList';
 import {
   priceCorrelations,
   whaleCorrelations,
@@ -61,6 +62,11 @@ export default function Home() {
       id: 'news-correlation',
       label: '뉴스와의\n관계',
       content: <CorrelationPanel data={newsCorrelations} title="뉴스와의 상관관계" />
+    },
+    {
+      id: 'spike',
+      label: 'Spike\n알람',
+      content: <SpikeAlarmList />
     },
     {
       id: 'news',
