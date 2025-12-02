@@ -7,4 +7,5 @@ plotly
 vaderSentiment
 streamlit
 scikit-learn
+nltk
 
