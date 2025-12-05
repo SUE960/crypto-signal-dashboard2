@@ -1,66 +1,14 @@
 // app/api/spike-points/route.ts
 import { NextResponse } from 'next/server';
-import fs from 'fs';
-import path from 'path';
-import { parse } from 'csv-parse/sync';
+import { getSpikeDetectionData } from '@/lib/supabase';
 
 export async function GET(request: Request) {
   try {
     const { searchParams } = new URL(request.url);
-    const range = searchParams.get('range') || '30d';
+    const range = (searchParams.get('range') || '30d') as '7d' | '30d' | '90d';
 
-    // CSV 파일 경로 찾기
-    const possiblePaths = [
-      path.join(process.cwd(), '../../data/final_integrated_data.csv'),
-      path.join(process.cwd(), '../data/final_integrated_data.csv'),
-      path.join(process.cwd(), 'data/final_integrated_data.csv'),
-    ];
-    
-    let dataPath = null;
-    for (const p of possiblePaths) {
-      if (fs.existsSync(p)) {
-        dataPath = p;
-        break;
-      }
-    }
-    
-    if (!dataPath) {
-      return NextResponse.json([]);
-    }
-
-    // CSV 파일 읽기
-    const fileContent = fs.readFileSync(dataPath, 'utf-8');
-    const records = parse(fileContent, {
-      columns: true,
-      skip_empty_lines: true
-    });
-
-    // 시간 범위 필터링
-    const now = new Date();
-    const days = range === '7d' ? 7 : range === '30d' ? 30 : 90;
-    const cutoffDate = new Date(now.getTime() - days * 24 * 60 * 60 * 1000);
-
-    const filteredData = records
-      .filter((record: any) => {
-        if (!record.timestamp) return false;
-        const recordDate = new Date(record.timestamp);
-        return recordDate >= cutoffDate;
-      })
-      .map((record: any) => ({
-        timestamp: record.timestamp,
-        whale_tx_count: parseFloat(record.whale_tx_count) || 0,
-        telegram_message_count: parseFloat(record.telegram_message_count) || 0,
-        twitter_engagement: parseFloat(record.twitter_engagement) || 0,
-        news_count: parseFloat(record.news_count) || 0,
-        btc_close: parseFloat(record.btc_close) || 0,
-        eth_close: parseFloat(record.eth_close) || 0,
-        btc_change: parseFloat(record.btc_price_change) || 0,
-        eth_change: parseFloat(record.eth_price_change) || 0,
-        telegram_sentiment: parseFloat(record.telegram_avg_sentiment) || 0,
-        twitter_sentiment: parseFloat(record.twitter_sentiment) || 0,
-        news_sentiment: parseFloat(record.news_sentiment_avg) || 0,
-      }))
-      .filter((item: any) => item.btc_close > 0 || item.eth_close > 0);
+    // Supabase에서 스파이크 감지용 데이터 가져오기
+    const filteredData = await getSpikeDetectionData(range);
 
     if (filteredData.length < 24) {
       return NextResponse.json([]);
