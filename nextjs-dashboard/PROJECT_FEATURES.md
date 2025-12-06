@@ -1,12 +1,12 @@
-# 🚀 Crypto Signal Dashboard - 전체 기능 목록
+# Crypto Signal Dashboard - 전체 기능 목록
 
-## 📋 프로젝트 개요
+## 프로젝트 개요
 
 **Crypto Signal Dashboard**는 실시간 암호화폐 시장 신호를 분석하고 시각화하는 종합 대시보드입니다.
 
 ---
 
-## 🏠 HOME 페이지 (`/`)
+## HOME 페이지 (`/`)
 
 ### 1. 종합 점수 헤더 (CompositeScoreHeader)
 
@@ -110,7 +110,7 @@
 
 ---
 
-## 🗣️ Community 페이지 (`/community`)
+## Community 페이지 (`/community`)
 
 ### 1. SentimentTrend (감성 트렌드)
 
