@@ -62,3 +62,6 @@ print(f"   {len(df_clean):,}개 고유 기사 저장")
 print("=" * 70)
 
 
+
+
+
