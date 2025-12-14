@@ -50,17 +50,17 @@ export default function Home() {
   const tabs = [
     {
       id: 'price',
-      label: '코인가격',
+      label: '코인\n가격',
       content: <CorrelationPanel data={priceCorrelations} title="코인 가격과의 상관관계" />
     },
     {
       id: 'whale',
-      label: '고래지갑',
+      label: '고래\n지갑',
       content: <CorrelationPanel data={whaleCorrelations} title="고래 거래와의 상관관계" />
     },
     {
       id: 'news-correlation',
-      label: '뉴스',
+      label: '코인\n뉴스',
       content: <CorrelationPanel data={newsCorrelations} title="뉴스와의 상관관계" />
     },
     {
@@ -70,7 +70,7 @@ export default function Home() {
     },
     {
       id: 'news',
-      label: '지금뉴스',
+      label: '지급\n뉴스',
       content: <NewsListPanel />
     },
   ];
