@@ -718,7 +718,7 @@ const RealTimeChart: React.FC<RealTimeChartProps> = ({ dataPath }) => {
       {/* 고래 거래 플로우 상세보기 버튼 */}
       <div className="w-full">
         <a
-          href="https://graph-visualization-kappa.vercel.app/"
+          href="https://graph-visualization2.vercel.app"
           target="_blank"
           rel="noopener noreferrer"
           className="w-full flex items-center justify-center gap-2 px-6 py-3 bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 text-white font-semibold rounded-xl transition-all duration-200 shadow-lg hover:shadow-xl transform hover:scale-[1.02]"
