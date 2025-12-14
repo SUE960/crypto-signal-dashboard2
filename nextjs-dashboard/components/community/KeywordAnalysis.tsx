@@ -37,6 +37,13 @@ export default function KeywordAnalysis() {
   const [showCalendar, setShowCalendar] = useState(false);
   const [selectedWord, setSelectedWord] = useState<string | null>(null);
 
+  // 컴포넌트 마운트 시 선택된 키워드 초기화
+  useEffect(() => {
+    setMounted(true);
+    setSelectedWord(null); // 초기화
+    setSelectedKeyword(''); // Context도 초기화
+  }, []);
+
   const [customRange, setCustomRange] = useState([
     {
       startDate: new Date(Date.now() - 30 * 86400000),
@@ -45,9 +52,6 @@ export default function KeywordAnalysis() {
     },
   ]);
 
-  useEffect(() => {
-    setMounted(true);
-  }, []);
 
   const fetchData = async () => {
     let url = `/api/community/wordcloud?sentiment=${sentiment}&range=${range}`;
