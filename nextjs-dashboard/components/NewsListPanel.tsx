@@ -194,60 +194,6 @@ const NewsListPanel: React.FC = () => {
 
   return (
     <div className="space-y-4">
-      {/* 필터 버튼들 */}
-      <div className="flex flex-wrap gap-2">
-        <button
-          onClick={() => setFilter('all')}
-          className={`px-4 py-2 rounded-lg font-medium text-sm transition-all ${
-            filter === 'all'
-              ? 'bg-blue-600 text-white'
-              : 'bg-gray-800 text-gray-400 hover:bg-gray-700'
-          }`}
-        >
-          전체 ({news.length})
-        </button>
-        <button
-          onClick={() => setFilter('bullish')}
-          className={`px-4 py-2 rounded-lg font-medium text-sm transition-all ${
-            filter === 'bullish'
-              ? 'bg-green-600 text-white'
-              : 'bg-gray-800 text-gray-400 hover:bg-gray-700'
-          }`}
-        >
-          🚀 강세 ({news.filter(n => n.has_bullish).length})
-        </button>
-        <button
-          onClick={() => setFilter('bearish')}
-          className={`px-4 py-2 rounded-lg font-medium text-sm transition-all ${
-            filter === 'bearish'
-              ? 'bg-red-600 text-white'
-              : 'bg-gray-800 text-gray-400 hover:bg-gray-700'
-          }`}
-        >
-          📉 약세 ({news.filter(n => n.has_bearish).length})
-        </button>
-        <button
-          onClick={() => setFilter('bitcoin')}
-          className={`px-4 py-2 rounded-lg font-medium text-sm transition-all ${
-            filter === 'bitcoin'
-              ? 'bg-orange-600 text-white'
-              : 'bg-gray-800 text-gray-400 hover:bg-gray-700'
-          }`}
-        >
-          ₿ BTC ({news.filter(n => n.has_bitcoin).length})
-        </button>
-        <button
-          onClick={() => setFilter('ethereum')}
-          className={`px-4 py-2 rounded-lg font-medium text-sm transition-all ${
-            filter === 'ethereum'
-              ? 'bg-blue-600 text-white'
-              : 'bg-gray-800 text-gray-400 hover:bg-gray-700'
-          }`}
-        >
-          Ξ ETH ({news.filter(n => n.has_ethereum).length})
-        </button>
-      </div>
-
       {/* 뉴스 리스트 */}
       <div className="space-y-3">
         {filteredNews.length === 0 ? (
@@ -333,16 +279,6 @@ const NewsListPanel: React.FC = () => {
         ))
         )}
       </div>
-
-      {/* 더보기 버튼 */}
-      {displayCount < news.length && (
-        <button
-          onClick={() => setDisplayCount(prev => prev + 10)}
-          className="w-full py-3 bg-gray-800 hover:bg-gray-700 text-gray-300 rounded-lg font-medium transition-all"
-        >
-          더 보기 ({news.length - displayCount}개 더)
-        </button>
-      )}
 
       {/* 새로고침 버튼 */}
       <button
