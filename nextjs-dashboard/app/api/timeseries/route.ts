@@ -60,8 +60,8 @@ export async function GET(request: Request) {
 
     // 범위에 따른 일수 계산
     const days = range === '7d' ? 7 : range === '30d' ? 30 : 90;
-    const cutoffDate = new Date();
-    cutoffDate.setDate(cutoffDate.getDate() - days);
+    // 날짜 필터링을 나중에 적용하므로 cutoffDate는 사용하지 않음
+    // 대신 최신 데이터부터 표시
 
     // CSV 파일 로드
     let whaleData: any[] = [];
@@ -88,19 +88,31 @@ export async function GET(request: Request) {
 
     // 타임스탬프 파싱 및 필터링
     const parseTimestamp = (ts: string): Date | null => {
-      if (!ts) return null;
+      if (!ts || ts === '#VALUE!' || ts.trim() === '') return null;
       try {
         // "2025-11-01 0:00" 형식 처리 (시간이 한 자리일 수 있음)
         let normalized = ts.toString().trim();
+        
+        // #VALUE! 같은 오류 값 필터링
+        if (normalized.includes('#') || normalized.toLowerCase().includes('value')) {
+          return null;
+        }
+        
         // "2025-11-01 0:00" -> "2025-11-01 00:00:00" 형식으로 변환
         if (normalized.match(/^\d{4}-\d{2}-\d{2} \d{1,2}:\d{2}$/)) {
           const [datePart, timePart] = normalized.split(' ');
           const [hour, minute] = timePart.split(':');
           normalized = `${datePart} ${hour.padStart(2, '0')}:${minute}:00`;
         }
+        
         const date = new Date(normalized);
-        return isNaN(date.getTime()) ? null : date;
-      } catch {
+        if (isNaN(date.getTime())) {
+          console.warn(`날짜 파싱 실패: ${ts} -> ${normalized}`);
+          return null;
+        }
+        return date;
+      } catch (error) {
+        console.warn(`날짜 파싱 오류: ${ts}`, error);
         return null;
       }
     };
@@ -108,18 +120,27 @@ export async function GET(request: Request) {
     // 고래 거래 데이터 처리
     const processedWhale = whaleData
       .map((row: any) => {
+        // #VALUE! 같은 오류 값 필터링
+        if (!row.Time || row.Time === '#VALUE!' || row.Time === '') {
+          return null;
+        }
+        
         const ts = parseTimestamp(row.Time || row.timestamp);
         if (!ts) return null;
 
-        // 날짜 필터링은 나중에 적용 (데이터가 있으면 최신부터 표시)
+        const txCount = parseFloat(row.frequency || row.tx_frequency || '0') || 0;
+        // 거래 횟수가 0이어도 데이터는 포함 (나중에 필터링)
+        
         return {
           timestamp: ts,
-          tx_count: parseFloat(row.frequency || row.tx_frequency || '0') || 0,
+          tx_count: txCount,
           volume_sum: parseFloat(row.sum_amount_usd || row.tx_amount_usd || '0') || 0,
         };
       })
       .filter((x: any) => x !== null)
       .sort((a: any, b: any) => a.timestamp.getTime() - b.timestamp.getTime());
+    
+    console.log(`고래 거래 데이터 처리: ${processedWhale.length}개 (원본: ${whaleData.length}개)`);
 
     // BTC 가격 데이터 처리
     const processedBtc = btcPriceData
@@ -260,13 +281,22 @@ export async function GET(request: Request) {
       });
 
     // 날짜 필터링 적용 (최신 데이터부터 표시하되, 범위 내 데이터만)
+    // 고래 거래 데이터가 있는 항목은 우선 표시
     if (result.length > 0) {
       const latestDate = new Date(result[result.length - 1].timestamp);
       const startDate = new Date(latestDate);
       startDate.setDate(startDate.getDate() - days);
       
+      // 고래 거래 데이터가 있는 항목은 필터링에서 제외하지 않음 (최대 7일 범위)
       result = result.filter((point) => {
         const pointDate = new Date(point.timestamp);
+        // 고래 거래 데이터가 있으면 최대 7일 범위 내에서 항상 포함
+        if (point.whale_tx_count > 0) {
+          const maxDaysAgo = new Date(latestDate);
+          maxDaysAgo.setDate(maxDaysAgo.getDate() - 7);
+          return pointDate >= maxDaysAgo;
+        }
+        // 고래 거래 데이터가 없으면 날짜 범위 내만 포함
         return pointDate >= startDate;
       });
     }
