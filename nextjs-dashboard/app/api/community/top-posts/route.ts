@@ -50,6 +50,11 @@ export async function GET(req: Request) {
     return r.post_date > max ? r.post_date : max;
   }, rows[0]?.post_date || new Date());
 
+  // 가장 오래된 날짜
+  const earliestDate = rows.reduce((min, r) => {
+    return r.post_date < min ? r.post_date : min;
+  }, rows[0]?.post_date || new Date());
+
   let to = new Date(latestDate);
   let from = new Date(latestDate);
 
@@ -97,5 +102,7 @@ export async function GET(req: Request) {
     perPage,
     from: from.toISOString(),
     to: to.toISOString(),
+    dataEarliest: earliestDate.toISOString(),
+    dataLatest: latestDate.toISOString(),
   });
 }

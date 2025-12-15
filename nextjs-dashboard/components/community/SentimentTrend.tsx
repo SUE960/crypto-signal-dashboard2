@@ -44,7 +44,7 @@ type Point = {
   correlation?: number;
 };
 
-const MAX_POINTS = 200;
+// MAX_POINTS 제한 제거 - 전체 데이터 사용
 
 // =============================
 // Rolling correlation 계산
@@ -211,17 +211,24 @@ export default function SentimentTrend() {
           );
         }
 
-        const trimmed =
-          merged.length > MAX_POINTS ? merged.slice(-MAX_POINTS) : merged;
-
-        setPoints(trimmed);
+        setPoints(merged);
 
         // 데이터 범위에 맞게 dateRange 초기화 (첫 로드시만)
-        if (trimmed.length > 0 && !dateRange) {
-          const firstDate = new Date(trimmed[0].time);
-          const lastDate = new Date(trimmed[trimmed.length - 1].time);
+        // 기본값: 데이터의 최근 30일
+        if (merged.length > 0 && !dateRange) {
+          const lastDate = new Date(merged[merged.length - 1].time);
+          const firstDate = new Date(merged[0].time);
+
+          // 30일 전 날짜 계산
+          const thirtyDaysAgo = new Date(lastDate);
+          thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+
+          // 데이터 시작일과 30일 전 중 더 늦은 날짜를 시작일로 사용
+          const startDate =
+            thirtyDaysAgo > firstDate ? thirtyDaysAgo : firstDate;
+
           setDateRange({
-            startDate: firstDate,
+            startDate: startDate,
             endDate: lastDate,
             key: 'selection',
           });
@@ -499,20 +506,6 @@ export default function SentimentTrend() {
                 <button
                   onClick={() => {
                     if (points.length > 0) {
-                      setDateRange({
-                        startDate: new Date(points[0].time),
-                        endDate: new Date(points[points.length - 1].time),
-                        key: 'selection',
-                      });
-                    }
-                  }}
-                  className="px-2 py-1 text-xs rounded bg-slate-700 text-slate-300 hover:bg-slate-600"
-                >
-                  전체
-                </button>
-                <button
-                  onClick={() => {
-                    if (points.length > 0) {
                       const lastDate = new Date(points[points.length - 1].time);
                       const startDate = new Date(lastDate);
                       startDate.setDate(startDate.getDate() - 7);
@@ -542,7 +535,24 @@ export default function SentimentTrend() {
                   }}
                   className="px-2 py-1 text-xs rounded bg-slate-700 text-slate-300 hover:bg-slate-600"
                 >
-                  30일
+                  30일(초기화)
+                </button>
+                <button
+                  onClick={() => {
+                    if (points.length > 0) {
+                      const lastDate = new Date(points[points.length - 1].time);
+                      const startDate = new Date(lastDate);
+                      startDate.setDate(startDate.getDate() - 90);
+                      setDateRange({
+                        startDate,
+                        endDate: lastDate,
+                        key: 'selection',
+                      });
+                    }
+                  }}
+                  className="px-2 py-1 text-xs rounded bg-slate-700 text-slate-300 hover:bg-slate-600"
+                >
+                  90일
                 </button>
                 <button
                   onClick={() => setShowCalendar(false)}

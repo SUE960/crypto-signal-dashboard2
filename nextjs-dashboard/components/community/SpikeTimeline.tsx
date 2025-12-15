@@ -100,25 +100,24 @@ export default function SpikeTimeline() {
           (a, b) => new Date(a.time).getTime() - new Date(b.time).getTime()
         );
 
-      // 최근 200개 데이터만 사용
-      const sliced = mapped.length > 200 ? mapped.slice(-200) : mapped;
-
-      setPoints(sliced);
+      // 전체 데이터 사용 (제한 없음)
+      setPoints(mapped);
       setVisibleCount(5);
 
-      // 데이터 범위에 맞게 dateRange 초기화 (첫 로드시만)
-      if (sliced.length > 0 && !dateRange) {
-        const firstDate = new Date(sliced[0].time);
-        const lastDate = new Date(sliced[sliced.length - 1].time);
+      // 데이터 범위에 맞게 dateRange 초기화 (첫 로드시만) - 기본 180일
+      if (mapped.length > 0 && !dateRange) {
+        const lastDate = new Date(mapped[mapped.length - 1].time);
+        const startDate = new Date(lastDate);
+        startDate.setDate(startDate.getDate() - 180);
         setDateRange({
-          startDate: firstDate,
+          startDate,
           endDate: lastDate,
           key: 'selection',
         });
       }
 
       const unique: number[] = [];
-      sliced.forEach((p) => {
+      mapped.forEach((p) => {
         const v = Math.floor(p.zscore);
         if (!unique.includes(v)) unique.push(v);
       });
@@ -463,6 +462,24 @@ export default function SpikeTimeline() {
                   className="px-2 py-1 text-xs rounded bg-slate-700 text-slate-300 hover:bg-slate-600"
                 >
                   90일
+                </button>
+                <button
+                  onClick={() => {
+                    // 초기화: 데이터 기준 최근 180일
+                    if (points.length > 0) {
+                      const lastDate = new Date(points[points.length - 1].time);
+                      const startDate = new Date(lastDate);
+                      startDate.setDate(startDate.getDate() - 180);
+                      setDateRange({
+                        startDate,
+                        endDate: lastDate,
+                        key: 'selection',
+                      });
+                    }
+                  }}
+                  className="px-2 py-1 text-xs rounded bg-slate-700 text-slate-300 hover:bg-slate-600"
+                >
+                  180일(초기화)
                 </button>
                 <button
                   onClick={() => setShowCalendar(false)}

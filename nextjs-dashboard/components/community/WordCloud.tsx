@@ -1,7 +1,7 @@
 'use client';
 
-import { useEffect, useState, useMemo } from 'react';
-import { DateRangePicker } from 'react-date-range';
+import { useEffect, useState, useMemo, useRef } from 'react';
+import { DateRange } from 'react-date-range';
 import Wordcloud from '@visx/wordcloud/lib/Wordcloud';
 import { scaleLog } from '@visx/scale';
 import { Text } from '@visx/text';
@@ -22,26 +22,37 @@ export default function WordCloud() {
 
   const [keywords, setKeywords] = useState<WordData[]>([]);
   const [sentiment, setSentiment] = useState('all');
-  const [range, setRange] = useState('7d');
   const [mounted, setMounted] = useState(false);
   const [showCalendar, setShowCalendar] = useState(false);
+  const calendarRef = useRef<HTMLDivElement>(null);
 
-  const [customRange, setCustomRange] = useState([
-    {
-      startDate: new Date(Date.now() - 7 * 86400000),
-      endDate: new Date(),
-      key: 'selection',
-    },
-  ]);
+  // 날짜 범위 필터 - 초기값은 null, 데이터 로드 후 설정
+  const [dateRange, setDateRange] = useState<{
+    startDate: Date;
+    endDate: Date;
+    key: string;
+  } | null>(null);
+
+  // API에서 반환된 실제 조회 기간
+  const [dataFrom, setDataFrom] = useState<Date | null>(null);
+  const [dataTo, setDataTo] = useState<Date | null>(null);
+
+  // 전체 데이터 범위
+  const [dataEarliest, setDataEarliest] = useState<Date | null>(null);
+  const [dataLatest, setDataLatest] = useState<Date | null>(null);
 
   useEffect(() => {
     setMounted(true);
   }, []);
 
   const fetchData = async () => {
-    let url = `/api/community/wordcloud?sentiment=${sentiment}&range=${range}`;
-    if (range === 'custom') {
-      url += `&from=${customRange[0].startDate.toISOString()}&to=${customRange[0].endDate.toISOString()}`;
+    let url = `/api/community/wordcloud?sentiment=${sentiment}`;
+
+    // dateRange가 있으면 custom, 없으면 기본 30일
+    if (dateRange) {
+      url += `&range=custom&from=${dateRange.startDate.toISOString()}&to=${dateRange.endDate.toISOString()}`;
+    } else {
+      url += `&range=30d`;
     }
 
     const res = await fetch(url);
@@ -51,6 +62,12 @@ export default function WordCloud() {
       setKeywords([]);
       return;
     }
+
+    // API에서 반환된 실제 조회 기간 저장
+    if (json.from) setDataFrom(new Date(json.from));
+    if (json.to) setDataTo(new Date(json.to));
+    if (json.dataEarliest) setDataEarliest(new Date(json.dataEarliest));
+    if (json.dataLatest) setDataLatest(new Date(json.dataLatest));
 
     setKeywords(
       json.keywords.map((k: any) => ({
@@ -65,13 +82,21 @@ export default function WordCloud() {
 
   useEffect(() => {
     fetchData();
-  }, [sentiment, range, customRange]);
+  }, [sentiment, dateRange]);
 
+  // 달력 외부 클릭 시 닫기
   useEffect(() => {
-    if (range === 'custom') {
-      setShowCalendar(true);
-    }
-  }, [range]);
+    const handleClickOutside = (event: MouseEvent) => {
+      if (
+        calendarRef.current &&
+        !calendarRef.current.contains(event.target as Node)
+      ) {
+        setShowCalendar(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
 
   const getColor = (word: WordData) => {
     if (sentiment === 'positive') return '#22c55e';
@@ -95,17 +120,181 @@ export default function WordCloud() {
 
   const fontSizeSetter = (datum: WordData) => fontScale(datum.value);
 
-  const handleApplyDate = () => {
-    setShowCalendar(false);
-    fetchData();
-  };
-
   return (
     <div className="p-6 rounded-2xl border border-slate-800 bg-gradient-to-b from-slate-900 to-slate-950 text-gray-200">
       <h2 className="text-xl font-semibold mb-4">Top Trending Keywords</h2>
 
       {/* 상단 필터 */}
       <div className="flex items-center gap-4 mb-4">
+        {/* 기간 달력 필터 */}
+        <div className="relative" ref={calendarRef}>
+          <button
+            onClick={() => setShowCalendar(!showCalendar)}
+            className="flex items-center gap-2 px-3 py-2 rounded-lg bg-slate-800 border border-slate-700 text-white text-sm hover:bg-slate-700 transition-colors"
+          >
+            📅{' '}
+            {dataFrom && dataTo
+              ? `${dataFrom.toLocaleDateString('ko-KR', {
+                  month: 'short',
+                  day: 'numeric',
+                })} ~ ${dataTo.toLocaleDateString('ko-KR', {
+                  month: 'short',
+                  day: 'numeric',
+                })}`
+              : '기간 선택'}
+          </button>
+
+          {showCalendar && (
+            <div className="absolute top-full left-0 mt-2 z-50 rounded-xl overflow-hidden shadow-2xl border border-slate-700">
+              <style jsx global>{`
+                .wordcloud-calendar .rdrCalendarWrapper,
+                .wordcloud-calendar .rdrDateDisplayWrapper,
+                .wordcloud-calendar .rdrMonthAndYearWrapper {
+                  background: #0f172a !important;
+                }
+                .wordcloud-calendar .rdrMonthAndYearPickers select {
+                  background: #1e293b !important;
+                  color: #e2e8f0 !important;
+                  border: 1px solid #334155 !important;
+                }
+                .wordcloud-calendar .rdrMonthAndYearPickers select option {
+                  background: #1e293b !important;
+                  color: #e2e8f0 !important;
+                }
+                .wordcloud-calendar .rdrNextPrevButton {
+                  background: #1e293b !important;
+                }
+                .wordcloud-calendar .rdrNextPrevButton:hover {
+                  background: #334155 !important;
+                }
+                .wordcloud-calendar .rdrNextPrevButton i {
+                  border-color: transparent transparent transparent #94a3b8 !important;
+                }
+                .wordcloud-calendar .rdrPprevButton i {
+                  border-color: transparent #94a3b8 transparent transparent !important;
+                }
+                .wordcloud-calendar .rdrMonth {
+                  background: #0f172a !important;
+                }
+                .wordcloud-calendar .rdrWeekDay {
+                  color: #64748b !important;
+                }
+                .wordcloud-calendar .rdrDay {
+                  color: #e2e8f0 !important;
+                }
+                .wordcloud-calendar .rdrDayNumber span {
+                  color: #e2e8f0 !important;
+                }
+                .wordcloud-calendar .rdrDayPassive .rdrDayNumber span {
+                  color: #475569 !important;
+                }
+                .wordcloud-calendar .rdrDayToday .rdrDayNumber span:after {
+                  background: #3b82f6 !important;
+                }
+                .wordcloud-calendar .rdrDayDisabled {
+                  background-color: #1e293b !important;
+                }
+                .wordcloud-calendar .rdrDayDisabled .rdrDayNumber span {
+                  color: #475569 !important;
+                }
+                .wordcloud-calendar .rdrDateDisplayItem {
+                  background: #1e293b !important;
+                  border-color: #334155 !important;
+                }
+                .wordcloud-calendar .rdrDateDisplayItem input {
+                  color: #e2e8f0 !important;
+                }
+                .wordcloud-calendar .rdrDateDisplayItemActive {
+                  border-color: #3b82f6 !important;
+                }
+                .wordcloud-calendar .rdrInRange,
+                .wordcloud-calendar .rdrStartEdge,
+                .wordcloud-calendar .rdrEndEdge {
+                  background: #3b82f6 !important;
+                }
+                .wordcloud-calendar .rdrDayStartPreview,
+                .wordcloud-calendar .rdrDayInPreview,
+                .wordcloud-calendar .rdrDayEndPreview {
+                  border-color: #3b82f6 !important;
+                }
+              `}</style>
+              <div className="wordcloud-calendar">
+                <DateRange
+                  ranges={
+                    dateRange
+                      ? [dateRange]
+                      : [
+                          {
+                            startDate: dataFrom || new Date(),
+                            endDate: dataTo || new Date(),
+                            key: 'selection',
+                          },
+                        ]
+                  }
+                  onChange={(item: any) => {
+                    setDateRange(item.selection);
+                  }}
+                  months={1}
+                  direction="horizontal"
+                  rangeColors={['#3b82f6']}
+                />
+              </div>
+              <div className="bg-slate-900 p-2 flex justify-end gap-2 border-t border-slate-700">
+                <button
+                  onClick={() => {
+                    // 데이터 기준 최근 7일
+                    if (dataLatest) {
+                      const startDate = new Date(dataLatest);
+                      startDate.setDate(startDate.getDate() - 7);
+                      setDateRange({
+                        startDate,
+                        endDate: dataLatest,
+                        key: 'selection',
+                      });
+                    }
+                  }}
+                  className="px-2 py-1 text-xs rounded bg-slate-700 text-slate-300 hover:bg-slate-600"
+                >
+                  7일
+                </button>
+                <button
+                  onClick={() => {
+                    // 초기화: 데이터 기준 최근 30일
+                    setDateRange(null);
+                  }}
+                  className="px-2 py-1 text-xs rounded bg-slate-700 text-slate-300 hover:bg-slate-600"
+                >
+                  30일(초기화)
+                </button>
+                <button
+                  onClick={() => {
+                    // 데이터 기준 최근 90일
+                    if (dataLatest) {
+                      const startDate = new Date(dataLatest);
+                      startDate.setDate(startDate.getDate() - 90);
+                      setDateRange({
+                        startDate,
+                        endDate: dataLatest,
+                        key: 'selection',
+                      });
+                    }
+                  }}
+                  className="px-2 py-1 text-xs rounded bg-slate-700 text-slate-300 hover:bg-slate-600"
+                >
+                  90일
+                </button>
+                <button
+                  onClick={() => setShowCalendar(false)}
+                  className="px-2 py-1 text-xs rounded bg-blue-600 text-white hover:bg-blue-500"
+                >
+                  확인
+                </button>
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* 감성 필터 */}
         <select
           className="px-3 py-2 rounded-lg bg-slate-800 border border-slate-700 text-white"
           value={sentiment}
@@ -115,16 +304,6 @@ export default function WordCloud() {
           <option value="positive">긍정</option>
           <option value="neutral">중립</option>
           <option value="negative">부정</option>
-        </select>
-
-        <select
-          className="px-3 py-2 rounded-lg bg-slate-800 border border-slate-700 text-white"
-          value={range}
-          onChange={(e) => setRange(e.target.value)}
-        >
-          <option value="7d">최근 7일</option>
-          <option value="30d">최근 30일</option>
-          <option value="custom">직접 선택</option>
         </select>
       </div>
 
@@ -143,161 +322,6 @@ export default function WordCloud() {
           <span className="text-slate-300">부정 (Negative)</span>
         </div>
       </div>
-
-      {/* Custom Range */}
-      {showCalendar && range === 'custom' && (
-        <div className="mb-6 relative z-50">
-          <div className="bg-slate-800 rounded-xl shadow-2xl p-5 inline-block border border-slate-700">
-            <div className="flex justify-between items-center mb-4">
-              <span className="text-white font-semibold text-lg">
-                📅 날짜 범위 선택
-              </span>
-              <button
-                onClick={() => {
-                  setShowCalendar(false);
-                  setRange('30d');
-                }}
-                className="text-slate-400 hover:text-white p-2 rounded-lg hover:bg-slate-700 transition-colors"
-                title="닫기"
-              >
-                <svg
-                  xmlns="http://www.w3.org/2000/svg"
-                  className="h-5 w-5"
-                  viewBox="0 0 20 20"
-                  fill="currentColor"
-                >
-                  <path
-                    fillRule="evenodd"
-                    d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z"
-                    clipRule="evenodd"
-                  />
-                </svg>
-              </button>
-            </div>
-            <style jsx global>{`
-              .rdrCalendarWrapper {
-                background: #1e293b !important;
-                color: white !important;
-              }
-              .rdrDateDisplayWrapper {
-                background: #334155 !important;
-              }
-              .rdrDateDisplayItem {
-                background: #475569 !important;
-                border-color: #64748b !important;
-              }
-              .rdrDateDisplayItem input {
-                color: white !important;
-              }
-              .rdrMonthAndYearWrapper {
-                background: #1e293b !important;
-              }
-              .rdrMonthAndYearPickers select {
-                color: white !important;
-                background: #334155 !important;
-              }
-              .rdrMonthAndYearPickers select option {
-                background: #334155 !important;
-              }
-              .rdrNextPrevButton {
-                background: #334155 !important;
-              }
-              .rdrNextPrevButton:hover {
-                background: #475569 !important;
-              }
-              .rdrNextPrevButton i {
-                border-color: transparent transparent transparent white !important;
-              }
-              .rdrPprevButton i {
-                border-color: transparent white transparent transparent !important;
-              }
-              .rdrMonth {
-                background: #1e293b !important;
-              }
-              .rdrWeekDays {
-                background: #1e293b !important;
-              }
-              .rdrWeekDay {
-                color: #94a3b8 !important;
-              }
-              .rdrDays {
-                background: #1e293b !important;
-              }
-              .rdrDay {
-                color: white !important;
-              }
-              .rdrDayNumber span {
-                color: white !important;
-              }
-              .rdrDayPassive .rdrDayNumber span {
-                color: #64748b !important;
-              }
-              .rdrDayToday .rdrDayNumber span:after {
-                background: #3b82f6 !important;
-              }
-              .rdrDayHovered {
-                background: #334155 !important;
-              }
-              .rdrDayStartPreview,
-              .rdrDayEndPreview,
-              .rdrDayInPreview {
-                border-color: #3b82f6 !important;
-              }
-              .rdrDefinedRangesWrapper {
-                background: #1e293b !important;
-                border-color: #334155 !important;
-              }
-              .rdrStaticRange {
-                background: #1e293b !important;
-                border-color: #334155 !important;
-              }
-              .rdrStaticRange:hover .rdrStaticRangeLabel {
-                background: #334155 !important;
-              }
-              .rdrStaticRangeLabel {
-                color: white !important;
-              }
-              .rdrInputRange {
-                background: #1e293b !important;
-              }
-              .rdrInputRangeInput {
-                background: #334155 !important;
-                border-color: #475569 !important;
-                color: white !important;
-              }
-              .rdrInputRanges {
-                background: #1e293b !important;
-              }
-              .rdrInputRanges span {
-                color: #94a3b8 !important;
-              }
-            `}</style>
-            <DateRangePicker
-              ranges={customRange}
-              onChange={(v) => setCustomRange([v.selection] as any)}
-              rangeColors={['#3b82f6']}
-              color="#3b82f6"
-            />
-            <div className="mt-4 flex justify-end gap-3">
-              <button
-                onClick={() => {
-                  setShowCalendar(false);
-                  setRange('30d');
-                }}
-                className="px-4 py-2 bg-slate-700 text-white rounded-lg hover:bg-slate-600 transition-colors"
-              >
-                취소
-              </button>
-              <button
-                onClick={handleApplyDate}
-                className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-500 transition-colors font-medium"
-              >
-                적용
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
 
       {/* WordCloud */}
       <div className="h-[420px] flex items-center justify-center bg-slate-800/50 border border-slate-700 rounded-xl p-4 overflow-hidden">

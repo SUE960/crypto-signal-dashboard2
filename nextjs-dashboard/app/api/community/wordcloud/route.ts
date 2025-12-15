@@ -45,6 +45,11 @@ export async function GET(req: Request) {
     return r.period > max ? r.period : max;
   }, rows[0]?.period || new Date());
 
+  // 가장 오래된 날짜
+  const earliestDate = rows.reduce((min, r) => {
+    return r.period < min ? r.period : min;
+  }, rows[0]?.period || new Date());
+
   let from: Date, to: Date;
 
   if (range === '7d') {
@@ -100,5 +105,7 @@ export async function GET(req: Request) {
     keywords,
     from: from.toISOString(),
     to: to.toISOString(),
+    dataEarliest: earliestDate.toISOString(),
+    dataLatest: latestDate.toISOString(),
   });
 }
