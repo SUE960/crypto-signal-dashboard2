@@ -90,7 +90,15 @@ export async function GET(request: Request) {
     const parseTimestamp = (ts: string): Date | null => {
       if (!ts) return null;
       try {
-        const date = new Date(ts);
+        // "2025-11-01 0:00" 형식 처리 (시간이 한 자리일 수 있음)
+        let normalized = ts.toString().trim();
+        // "2025-11-01 0:00" -> "2025-11-01 00:00:00" 형식으로 변환
+        if (normalized.match(/^\d{4}-\d{2}-\d{2} \d{1,2}:\d{2}$/)) {
+          const [datePart, timePart] = normalized.split(' ');
+          const [hour, minute] = timePart.split(':');
+          normalized = `${datePart} ${hour.padStart(2, '0')}:${minute}:00`;
+        }
+        const date = new Date(normalized);
         return isNaN(date.getTime()) ? null : date;
       } catch {
         return null;
