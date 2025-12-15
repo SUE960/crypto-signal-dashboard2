@@ -89,11 +89,24 @@ const RealTimeChart: React.FC<RealTimeChartProps> = ({ dataPath }) => {
       }
       
       const jsonData = await response.json();
-      setData(jsonData);
+      console.log('API에서 받은 데이터:', {
+        개수: Array.isArray(jsonData) ? jsonData.length : 0,
+        첫번째데이터: Array.isArray(jsonData) && jsonData.length > 0 ? jsonData[0] : null,
+        마지막데이터: Array.isArray(jsonData) && jsonData.length > 0 ? jsonData[jsonData.length - 1] : null
+      });
+      
+      if (Array.isArray(jsonData) && jsonData.length > 0) {
+        setData(jsonData);
+      } else {
+        console.warn('API에서 빈 데이터를 받았습니다. 더미 데이터를 사용합니다.');
+        setData(generateDummyData(timeRange));
+      }
     } catch (error) {
       console.error('데이터 로딩 중 오류:', error);
       // 에러 시 더미 데이터 사용
-      setData(generateDummyData(timeRange));
+      const dummyData = generateDummyData(timeRange);
+      console.log('더미 데이터 생성:', dummyData.length, '개');
+      setData(dummyData);
     } finally {
       setLoading(false);
     }
@@ -103,50 +116,66 @@ const RealTimeChart: React.FC<RealTimeChartProps> = ({ dataPath }) => {
   const getFilteredData = () => {
     if (data.length === 0) return [];
     
+    // 데이터를 시간순으로 정렬 (오름차순)
+    const sortedData = [...data].sort((a, b) => 
+      new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime()
+    );
+    
     // 날짜가 선택된 경우
     if (selectedDate) {
       const selectedTimestamp = new Date(selectedDate).getTime();
-      const selectedIndex = data.findIndex(
+      const selectedIndex = sortedData.findIndex(
         (d) => new Date(d.timestamp).getTime() >= selectedTimestamp
       );
       if (selectedIndex >= 0) {
-        return data.slice(selectedIndex);
+        return sortedData.slice(selectedIndex);
       }
     }
     
     // 드래그로 이동한 경우
     if (viewStartIndex > 0) {
-      return data.slice(viewStartIndex);
+      return sortedData.slice(viewStartIndex);
     }
     
-    // 기본값: 가장 최신 데이터부터 표시 (7일 범위에 맞춰 최신 데이터 우선)
-    // 데이터가 시간순으로 정렬되어 있다고 가정하고, 최신 데이터부터 표시
-    // 7일 범위를 보여주기 위해 최신 데이터부터 필요한 만큼만 표시
-    const sortedData = [...data].sort((a, b) => 
-      new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime()
-    );
-    
-    // 7일 범위 계산: 최신 날짜 기준으로 7일 전까지
+    // 기본값: 가장 최신 데이터부터 표시 (7일 범위)
+    // 최신 날짜 기준으로 7일 전까지의 데이터만 표시
     if (sortedData.length > 0) {
       const latestDate = new Date(sortedData[sortedData.length - 1].timestamp);
       const sevenDaysAgo = new Date(latestDate);
       sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+      sevenDaysAgo.setHours(0, 0, 0, 0); // 시간을 0으로 설정하여 정확한 비교
       
       const sevenDaysAgoTime = sevenDaysAgo.getTime();
       const startIndex = sortedData.findIndex(
         (d) => new Date(d.timestamp).getTime() >= sevenDaysAgoTime
       );
       
+      // 7일 범위를 찾은 경우
       if (startIndex >= 0) {
         return sortedData.slice(startIndex);
       }
+      
+      // 7일 범위를 찾지 못한 경우, 최신 데이터부터 최대 200개 표시
+      // 또는 데이터가 적으면 전체 표시
+      return sortedData.slice(-Math.min(200, sortedData.length));
     }
     
-    // 7일 범위를 찾지 못한 경우, 최신 데이터부터 최대 200개만 표시
-    return sortedData.slice(-200);
+    // 데이터가 있지만 정렬 실패한 경우, 원본 데이터 반환
+    return data;
   };
 
   const filteredData = getFilteredData();
+  
+  // 디버깅: 데이터 상태 확인
+  useEffect(() => {
+    console.log('차트 데이터 상태:', {
+      원본데이터개수: data.length,
+      필터링된데이터개수: filteredData.length,
+      timeRange,
+      selectedDate,
+      viewStartIndex
+    });
+  }, [data.length, filteredData.length, timeRange, selectedDate, viewStartIndex]);
 
   // 데이터와 Spike 포인트 매칭
   const dataWithSpikes = filteredData.map((point) => {
