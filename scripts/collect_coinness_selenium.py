@@ -324,13 +324,13 @@ class CoinnessSeleniumCollector:
 def main():
     """메인 함수"""
     print("=" * 60)
-    print("코인니스 뉴스 데이터 수집 (Selenium)")
+    print("코인니스 뉴스 데이터 수집 (Selenium) - 최근 일주일")
     print("=" * 60)
     
-    # 수집 설정
-    start_date = datetime(2025, 1, 1)
-    max_pages = 100
-    output_file = 'data/coinness_data.csv'
+    # 수집 설정 - 최근 일주일치만 수집
+    start_date = datetime.now() - timedelta(days=7)
+    max_pages = 50  # 일주일치면 50페이지면 충분
+    output_file = 'data/coinness_data_recent_7days.csv'
     
     # 수집기 초기화 (headless=True: 브라우저 숨김)
     collector = CoinnessSeleniumCollector(headless=True)

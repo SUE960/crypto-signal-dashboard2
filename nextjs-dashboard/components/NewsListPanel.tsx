@@ -34,11 +34,17 @@ const NewsListPanel: React.FC = () => {
       const response = await fetch('/api/news/recent?limit=50');
       
       if (!response.ok) {
+        console.error('API 응답 실패:', response.status);
         // API 실패 시 더미 데이터
         setNews(generateDummyNews());
       } else {
         const data = await response.json();
-        setNews(data);
+        if (Array.isArray(data) && data.length > 0) {
+          setNews(data);
+        } else {
+          console.warn('뉴스 데이터가 비어있습니다. 더미 데이터를 사용합니다.');
+          setNews(generateDummyNews());
+        }
       }
     } catch (error) {
       console.error('뉴스 로딩 실패:', error);

@@ -8,7 +8,7 @@ import os
 import sys
 import time
 import random
-from datetime import datetime
+from datetime import datetime, timedelta
 import pandas as pd
 from selenium import webdriver
 from selenium.webdriver.chrome.service import Service
@@ -288,7 +288,7 @@ class CoinnessCollector:
 def main():
     """메인 함수"""
     print("=" * 60)
-    print("코인니스 뉴스 데이터 수집 (수동 ChromeDriver)")
+    print("코인니스 뉴스 데이터 수집 (수동 ChromeDriver) - 최근 일주일")
     print("=" * 60)
     print()
     
@@ -306,14 +306,17 @@ def main():
         print("  xattr -d com.apple.quarantine /opt/homebrew/bin/chromedriver")
         return
     
-    # 수집 (2025년 전체 커버, 자동 중단 기능 있음)
+    # 수집 설정 - 최근 일주일치만 수집
+    start_date = datetime.now() - timedelta(days=7)
+    print(f"수집 기간: {start_date.date()} ~ 현재\n")
+    
     collector = CoinnessCollector(chromedriver_path=chromedriver_path, headless=True)
-    df = collector.collect_news(max_pages=2000, start_date=datetime(2025, 1, 1))
+    df = collector.collect_news(max_pages=50, start_date=start_date)
     
     # 저장
     if not df.empty:
         os.makedirs('data', exist_ok=True)
-        output_file = 'data/coinness_data.csv'
+        output_file = 'data/coinness_data_recent_7days.csv'
         df.to_csv(output_file, index=False, encoding='utf-8-sig')
         
         print(f"✅ 저장 완료: {output_file}")
