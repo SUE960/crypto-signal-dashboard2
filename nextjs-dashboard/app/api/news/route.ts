@@ -6,11 +6,12 @@ import { parse } from 'csv-parse/sync';
 export async function GET() {
   try {
     // 코인니스 데이터 파일 경로 (프로젝트 루트 기준)
-    // Vercel에서는 절대 경로를 사용하거나 환경 변수로 설정
+    // Vercel 배포 환경을 고려한 경로들
     const possiblePaths = [
-      path.join(process.cwd(), '../../data/coinness_data2.csv'),
-      path.join(process.cwd(), 'data/coinness_data2.csv'),
-      path.join(process.cwd(), '../data/coinness_data2.csv'),
+      path.join(process.cwd(), 'data/coinness_data2.csv'),  // nextjs-dashboard/data/ (우선)
+      path.join(process.cwd(), '../../data/coinness_data2.csv'),  // 프로젝트 루트/data/
+      path.join(process.cwd(), '../data/coinness_data2.csv'),  // 상위 폴더/data/
+      path.join(process.cwd(), 'public/data/coinness_data2.csv'),  // public 폴더
     ];
     
     let dataPath = null;
