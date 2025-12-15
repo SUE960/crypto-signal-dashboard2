@@ -137,13 +137,12 @@ const RealTimeChart: React.FC<RealTimeChartProps> = ({ dataPath }) => {
       return sortedData.slice(viewStartIndex);
     }
     
-    // 기본값: 가장 최신 데이터부터 표시 (7일 범위)
-    // 최신 날짜 기준으로 7일 전까지의 데이터만 표시
+    // 기본값: 가장 최신 데이터부터 표시
+    // 최신 날짜 기준으로 7일 전까지의 데이터만 표시하되, 데이터가 적으면 전체 표시
     if (sortedData.length > 0) {
       const latestDate = new Date(sortedData[sortedData.length - 1].timestamp);
       const sevenDaysAgo = new Date(latestDate);
       sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
-      sevenDaysAgo.setHours(0, 0, 0, 0); // 시간을 0으로 설정하여 정확한 비교
       
       const sevenDaysAgoTime = sevenDaysAgo.getTime();
       const startIndex = sortedData.findIndex(
@@ -151,16 +150,17 @@ const RealTimeChart: React.FC<RealTimeChartProps> = ({ dataPath }) => {
       );
       
       // 7일 범위를 찾은 경우
-      if (startIndex >= 0) {
+      if (startIndex >= 0 && startIndex < sortedData.length) {
         return sortedData.slice(startIndex);
       }
       
-      // 7일 범위를 찾지 못한 경우, 최신 데이터부터 최대 200개 표시
-      // 또는 데이터가 적으면 전체 표시
-      return sortedData.slice(-Math.min(200, sortedData.length));
+      // 7일 범위를 찾지 못했거나 데이터가 적은 경우, 최신 데이터부터 표시
+      // 최소 50개 이상은 표시하도록 보장
+      const minDisplayCount = Math.min(50, sortedData.length);
+      return sortedData.slice(-Math.max(minDisplayCount, sortedData.length));
     }
     
-    // 데이터가 있지만 정렬 실패한 경우, 원본 데이터 반환
+    // 정렬 실패한 경우, 원본 데이터 반환
     return data;
   };
 
@@ -173,12 +173,17 @@ const RealTimeChart: React.FC<RealTimeChartProps> = ({ dataPath }) => {
       필터링된데이터개수: filteredData.length,
       timeRange,
       selectedDate,
-      viewStartIndex
+      viewStartIndex,
+      첫번째데이터: filteredData.length > 0 ? filteredData[0] : null,
+      마지막데이터: filteredData.length > 0 ? filteredData[filteredData.length - 1] : null
     });
   }, [data.length, filteredData.length, timeRange, selectedDate, viewStartIndex]);
 
+  // 필터링된 데이터가 없으면 원본 데이터 사용 (최소한 뭔가 표시)
+  const displayData = filteredData.length > 0 ? filteredData : data;
+
   // 데이터와 Spike 포인트 매칭
-  const dataWithSpikes = filteredData.map((point) => {
+  const dataWithSpikes = displayData.map((point) => {
     const spike = spikePoints.find(
       (sp) => new Date(sp.timestamp).getTime() === new Date(point.timestamp).getTime()
     );
