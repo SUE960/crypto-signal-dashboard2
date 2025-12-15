@@ -492,6 +492,8 @@ const RealTimeChart: React.FC<RealTimeChartProps> = ({ dataPath }) => {
                 stroke="#a855f7"
                 style={{ fontSize: '11px' }}
                 tick={{ fill: '#a855f7' }}
+                domain={['auto', 'auto']}
+                allowDataOverflow={false}
                 label={{
                   value: '고래 거래 (건)',
                   angle: -90,
@@ -507,6 +509,8 @@ const RealTimeChart: React.FC<RealTimeChartProps> = ({ dataPath }) => {
                 stroke="#60a5fa"
                 style={{ fontSize: '11px' }}
                 tick={{ fill: '#60a5fa' }}
+                domain={['auto', 'auto']}
+                allowDataOverflow={false}
                 label={{
                   value: '가격 ($)',
                   angle: 90,
