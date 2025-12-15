@@ -21,22 +21,30 @@ interface ChartDataPoint {
 
 function loadCSV(relativeFile: string): any[] {
   // nextjs-dashboard -> 상위 폴더 -> data -> 파일
+  // Vercel 배포 환경을 고려한 경로들
   const possiblePaths = [
-    path.join(process.cwd(), '..', 'data', relativeFile),
-    path.join(process.cwd(), '../../data', relativeFile),
-    path.join(process.cwd(), 'data', relativeFile),
+    path.join(process.cwd(), 'data', relativeFile),  // nextjs-dashboard/data/ (우선)
+    path.join(process.cwd(), '..', 'data', relativeFile),  // 상위 폴더/data/
+    path.join(process.cwd(), '../../data', relativeFile),  // 프로젝트 루트/data/
+    path.join(process.cwd(), 'public/data', relativeFile),  // public/data/
   ];
 
   for (const fullPath of possiblePaths) {
     if (fs.existsSync(fullPath)) {
+      console.log(`✅ CSV 파일 발견: ${fullPath}`);
       const text = fs.readFileSync(fullPath, 'utf-8');
-      return parse(text, {
+      const records = parse(text, {
         columns: true,
         skip_empty_lines: true,
       });
+      console.log(`   로드된 레코드 수: ${records.length}`);
+      return records;
     }
   }
 
+  // 모든 경로 시도 실패
+  console.error(`❌ CSV 파일을 찾을 수 없습니다: ${relativeFile}`);
+  console.error(`   시도한 경로들:`, possiblePaths);
   throw new Error(`CSV file not found: ${relativeFile}`);
 }
 
