@@ -609,8 +609,21 @@ const RealTimeChart: React.FC<RealTimeChartProps> = ({ dataPath }) => {
               
               <CartesianGrid strokeDasharray="3 3" stroke="#374151" opacity={0.5} />
               <XAxis dataKey="date" stroke="#9ca3af" style={{ fontSize: '11px' }} />
-              <YAxis yAxisId="left" stroke="#a855f7" style={{ fontSize: '11px' }} />
-              <YAxis yAxisId="right" orientation="right" stroke="#60a5fa" style={{ fontSize: '11px' }} />
+              <YAxis 
+                yAxisId="left" 
+                stroke="#a855f7" 
+                style={{ fontSize: '11px' }}
+                domain={['auto', 'auto']}
+                allowDataOverflow={false}
+              />
+              <YAxis 
+                yAxisId="right" 
+                orientation="right" 
+                stroke="#60a5fa" 
+                style={{ fontSize: '11px' }}
+                domain={['auto', 'auto']}
+                allowDataOverflow={false}
+              />
               <Tooltip content={<CustomTooltip spikePoints={spikePoints} />} />
               <Legend wrapperStyle={{ paddingTop: '20px' }} />
               
@@ -640,14 +653,12 @@ const RealTimeChart: React.FC<RealTimeChartProps> = ({ dataPath }) => {
                 );
               })}
 
-              <Area
+              <Bar
                 yAxisId="left"
-                type="monotone"
                 dataKey="whale_tx_count"
-                stroke="#a855f7"
-                fillOpacity={1}
-                fill="url(#colorWhale)"
-                strokeWidth={2}
+                fill="#a855f7"
+                opacity={0.8}
+                radius={[4, 4, 0, 0]}
                 name="고래 거래"
               />
               
@@ -681,8 +692,21 @@ const RealTimeChart: React.FC<RealTimeChartProps> = ({ dataPath }) => {
             <LineChart data={dataWithSpikes} margin={{ top: 10, right: 30, left: 20, bottom: 10 }}>
               <CartesianGrid strokeDasharray="3 3" stroke="#374151" opacity={0.5} />
               <XAxis dataKey="date" stroke="#9ca3af" style={{ fontSize: '11px' }} />
-              <YAxis yAxisId="left" stroke="#a855f7" style={{ fontSize: '11px' }} />
-              <YAxis yAxisId="right" orientation="right" stroke="#60a5fa" style={{ fontSize: '11px' }} />
+              <YAxis 
+                yAxisId="left" 
+                stroke="#a855f7" 
+                style={{ fontSize: '11px' }}
+                domain={['auto', 'auto']}
+                allowDataOverflow={false}
+              />
+              <YAxis 
+                yAxisId="right" 
+                orientation="right" 
+                stroke="#60a5fa" 
+                style={{ fontSize: '11px' }}
+                domain={['auto', 'auto']}
+                allowDataOverflow={false}
+              />
               <Tooltip content={<CustomTooltip spikePoints={spikePoints} />} />
               <Legend wrapperStyle={{ paddingTop: '20px' }} />
               
