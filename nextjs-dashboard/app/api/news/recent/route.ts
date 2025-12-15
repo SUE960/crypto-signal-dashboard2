@@ -15,7 +15,8 @@ export async function GET(request: Request) {
     // 코인니스 데이터 파일 경로 (프로젝트 루트 기준)
     // Vercel 배포 환경을 고려한 경로들
     const possiblePaths = [
-      path.join(process.cwd(), 'data/coinness_data2.csv'),  // nextjs-dashboard/data/ (우선)
+      path.join(process.cwd(), 'data/coinness_data2_latest.csv'),  // 최신 100개 (우선, 빠른 로딩)
+      path.join(process.cwd(), 'data/coinness_data2.csv'),  // 전체 데이터
       path.join(process.cwd(), '../../data/coinness_data2.csv'),  // 프로젝트 루트/data/
       path.join(process.cwd(), '../data/coinness_data2.csv'),  // 상위 폴더/data/
       path.join(process.cwd(), 'public/data/coinness_data2.csv'),  // public 폴더
