@@ -552,21 +552,12 @@ const RealTimeChart: React.FC<RealTimeChartProps> = ({ dataPath }) => {
                 );
               })}
 
-              {/* 고래 거래 (영역 + 바) */}
-              <Area
-                yAxisId="left"
-                type="monotone"
-                dataKey="whale_tx_count"
-                fill="url(#whaleGradient)"
-                stroke="#a855f7"
-                strokeWidth={0}
-                name="고래 거래"
-              />
+              {/* 고래 거래 (막대 그래프) */}
               <Bar
                 yAxisId="left"
                 dataKey="whale_tx_count"
                 fill="#a855f7"
-                opacity={0.6}
+                opacity={0.8}
                 radius={[4, 4, 0, 0]}
                 name="고래 거래"
               />
@@ -721,15 +712,14 @@ const RealTimeChart: React.FC<RealTimeChartProps> = ({ dataPath }) => {
                 );
               })}
 
-              <Line
-                yAxisId="left"
-                type="monotone"
-                dataKey="whale_tx_count"
-                stroke="#a855f7"
-                strokeWidth={3}
-                dot={false}
-                name="고래 거래"
-              />
+                     <Bar
+                       yAxisId="left"
+                       dataKey="whale_tx_count"
+                       fill="#a855f7"
+                       opacity={0.8}
+                       radius={[4, 4, 0, 0]}
+                       name="고래 거래"
+                     />
               
               {selectedCoin !== 'eth' && (
                 <Line
