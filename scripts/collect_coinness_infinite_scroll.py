@@ -186,7 +186,7 @@ def collect_with_infinite_scroll(chromedriver_path, start_date, max_articles=200
             total_duplicates = len(seen_articles) - total_collected
             
             print(f"클릭 {click_count:3d}: 신규 {new_count:3d}개 | "
-                  f"총 {total_collected:5d}개 | 중복 {total_duplicates:5d}개", end='')
+                  f"총 {total_collected:5d}개 / {max_articles:,}개 | 중복 {total_duplicates:5d}개", end='')
             
             # 종료 조건
             if stop_collecting:
@@ -194,7 +194,7 @@ def collect_with_infinite_scroll(chromedriver_path, start_date, max_articles=200
                 break
             
             if total_collected >= max_articles:
-                print(f" → ✓ 최대 기사 수 도달!")
+                print(f" → ✓ 목표 기사 수({max_articles:,}개) 달성! 자동 중단합니다.")
                 break
             
             if new_count == 0:
@@ -276,8 +276,22 @@ def collect_with_infinite_scroll(chromedriver_path, start_date, max_articles=200
         print(f"중복 제외: {len(seen_articles) - len(all_articles):,}개")
         print('='*70)
         
+    except KeyboardInterrupt:
+        print(f"\n\n⚠️  사용자에 의해 중단되었습니다 (Ctrl+C)")
+        print(f"지금까지 수집한 {len(all_articles):,}개 기사를 저장합니다...")
+        try:
+            driver.quit()
+        except:
+            pass
+    except Exception as e:
+        print(f"\n❌ 오류 발생: {e}")
+        import traceback
+        traceback.print_exc()
     finally:
-        driver.quit()
+        try:
+            driver.quit()
+        except:
+            pass
     
     return all_articles
 
@@ -303,7 +317,7 @@ def main():
     articles = collect_with_infinite_scroll(
         chromedriver_path=chromedriver_path,
         start_date=start_date,
-        max_articles=20000  # 최대 20,000개
+        max_articles=5000  # 최대 5,000개 (목표 달성 시 자동 중단)
     )
     
     # 저장
