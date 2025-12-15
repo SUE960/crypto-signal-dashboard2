@@ -37,15 +37,20 @@ export async function GET(req: Request) {
     neutral: Number(r.neutral) || 0,
   }));
 
+  // 데이터의 가장 최근 날짜를 기준으로 계산
+  const latestDate = rows.reduce((max, r) => {
+    return r.period > max ? r.period : max;
+  }, rows[0]?.period || new Date());
+
   let from: Date, to: Date;
 
   if (range === '7d') {
-    to = new Date();
-    from = new Date();
+    to = new Date(latestDate);
+    from = new Date(latestDate);
     from.setDate(to.getDate() - 7);
   } else if (range === '30d') {
-    to = new Date();
-    from = new Date();
+    to = new Date(latestDate);
+    from = new Date(latestDate);
     from.setDate(to.getDate() - 30);
   } else if (range === 'custom' && fromParam && toParam) {
     from = new Date(fromParam);

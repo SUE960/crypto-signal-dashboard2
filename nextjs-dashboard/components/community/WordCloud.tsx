@@ -22,13 +22,13 @@ export default function WordCloud() {
 
   const [keywords, setKeywords] = useState<WordData[]>([]);
   const [sentiment, setSentiment] = useState('all');
-  const [range, setRange] = useState('30d');
+  const [range, setRange] = useState('7d');
   const [mounted, setMounted] = useState(false);
   const [showCalendar, setShowCalendar] = useState(false);
 
   const [customRange, setCustomRange] = useState([
     {
-      startDate: new Date(Date.now() - 30 * 86400000),
+      startDate: new Date(Date.now() - 7 * 86400000),
       endDate: new Date(),
       key: 'selection',
     },

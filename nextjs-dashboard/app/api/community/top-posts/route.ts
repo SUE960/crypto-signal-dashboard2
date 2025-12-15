@@ -42,18 +42,23 @@ export async function GET(req: Request) {
   // ----------------------
   // 기간 필터링
   // ----------------------
-  const now = new Date();
-  let from = new Date();
+  // 데이터의 가장 최근 날짜를 기준으로 계산
+  const latestDate = rows.reduce((max, r) => {
+    return r.post_date > max ? r.post_date : max;
+  }, rows[0]?.post_date || new Date());
 
-  if (range === '7d') from.setDate(now.getDate() - 7);
-  if (range === '30d') from.setDate(now.getDate() - 30);
+  let to = new Date(latestDate);
+  let from = new Date(latestDate);
+
+  if (range === '7d') from.setDate(to.getDate() - 7);
+  if (range === '30d') from.setDate(to.getDate() - 30);
 
   if (customFrom && customTo) {
     from = new Date(customFrom);
-    now.setTime(new Date(customTo).getTime());
+    to = new Date(customTo);
   }
 
-  rows = rows.filter((r) => r.post_date >= from && r.post_date <= now);
+  rows = rows.filter((r) => r.post_date >= from && r.post_date <= to);
 
   // ----------------------
   // sentiment 필터링
@@ -88,6 +93,6 @@ export async function GET(req: Request) {
     page,
     perPage,
     from: from.toISOString(),
-    to: now.toISOString(),
+    to: to.toISOString(),
   });
 }
