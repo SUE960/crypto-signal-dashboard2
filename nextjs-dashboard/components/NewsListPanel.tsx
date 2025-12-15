@@ -21,7 +21,7 @@ const NewsListPanel: React.FC = () => {
   const [news, setNews] = useState<NewsItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState<'all' | 'bullish' | 'bearish' | 'bitcoin' | 'ethereum'>('all');
-  const [displayCount, setDisplayCount] = useState(10);
+  const [displayCount, setDisplayCount] = useState(5); // 기본 5개로 변경
 
   useEffect(() => {
     loadNews();
