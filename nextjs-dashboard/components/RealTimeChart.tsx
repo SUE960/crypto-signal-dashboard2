@@ -61,6 +61,7 @@ const RealTimeChart: React.FC<RealTimeChartProps> = ({ dataPath }) => {
       await loadRealData();
       await loadSpikePoints();
       setViewStartIndex(0); // 범위 변경 시 리셋
+      setSelectedDate(''); // 날짜 선택도 리셋하여 최신 데이터 표시
     };
     loadData();
   }, [timeRange]);
@@ -118,7 +119,31 @@ const RealTimeChart: React.FC<RealTimeChartProps> = ({ dataPath }) => {
       return data.slice(viewStartIndex);
     }
     
-    return data;
+    // 기본값: 가장 최신 데이터부터 표시 (7일 범위에 맞춰 최신 데이터 우선)
+    // 데이터가 시간순으로 정렬되어 있다고 가정하고, 최신 데이터부터 표시
+    // 7일 범위를 보여주기 위해 최신 데이터부터 필요한 만큼만 표시
+    const sortedData = [...data].sort((a, b) => 
+      new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime()
+    );
+    
+    // 7일 범위 계산: 최신 날짜 기준으로 7일 전까지
+    if (sortedData.length > 0) {
+      const latestDate = new Date(sortedData[sortedData.length - 1].timestamp);
+      const sevenDaysAgo = new Date(latestDate);
+      sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+      
+      const sevenDaysAgoTime = sevenDaysAgo.getTime();
+      const startIndex = sortedData.findIndex(
+        (d) => new Date(d.timestamp).getTime() >= sevenDaysAgoTime
+      );
+      
+      if (startIndex >= 0) {
+        return sortedData.slice(startIndex);
+      }
+    }
+    
+    // 7일 범위를 찾지 못한 경우, 최신 데이터부터 최대 200개만 표시
+    return sortedData.slice(-200);
   };
 
   const filteredData = getFilteredData();
