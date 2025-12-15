@@ -117,6 +117,8 @@ export async function GET(request: Request) {
   try {
     const { searchParams } = new URL(request.url);
     const range = searchParams.get('range') || '30d';
+    const startDate = searchParams.get('startDate'); // 선택한 시작 날짜
+    const endDate = searchParams.get('endDate'); // 선택한 종료 날짜
 
     // 범위에 따른 일수 계산
     const days = range === '7d' ? 7 : range === '30d' ? 30 : 90;
@@ -124,32 +126,36 @@ export async function GET(request: Request) {
     // 대신 최신 데이터부터 표시
 
     // Supabase에서 고래 거래 데이터 로드
-    // 11월 1일~8일 데이터를 직접 필터링해서 가져오기
     let whaleData: any[] = [];
-    try {
-      // 먼저 캐시 확인
-      const cache = loadCache();
-      if (cache && cache.data.length > 0) {
-        whaleData = cache.data;
-        console.log(`✅ 캐시에서 11월 1일~8일 데이터 ${whaleData.length}개 로드 완료`);
-      } else {
-        console.log('🔄 Supabase에서 고래 거래 데이터 로드 중...');
+    
+    // 11/1 이전 날짜 범위가 요청된 경우 해당 범위 데이터 가져오기
+    if (startDate && endDate) {
+      const start = new Date(startDate);
+      const end = new Date(endDate);
+      const nov1Start = new Date('2025-11-01T00:00:00.000Z');
+      
+      // 11/1 이전 범위인 경우
+      if (end < nov1Start) {
+        console.log(`🔄 Supabase에서 ${startDate} ~ ${endDate} 범위 데이터 로드 중...`);
         
-        // 11월 1일~8일 데이터를 직접 필터링해서 가져오기
-        // "2025-11-01" ~ "2025-11-08" 형식과 "2025.11.1" ~ "2025.11.8" 형식 모두 포함
-        // 두 개의 쿼리로 분리해서 실행 (Supabase의 .or() 문법이 불안정할 수 있음)
+        // 날짜 범위 내의 모든 날짜 생성
+        const dateList: string[] = [];
+        const current = new Date(start);
+        while (current <= end) {
+          const dateStr = current.toISOString().split('T')[0];
+          dateList.push(dateStr);
+          current.setDate(current.getDate() + 1);
+        }
         
-        // 11월 1일~8일 데이터를 페이지네이션으로 모두 가져오기
-        const novDates = ['2025-11-01', '2025-11-02', '2025-11-03', '2025-11-04', '2025-11-05', '2025-11-06', '2025-11-07', '2025-11-08'];
-        const allNovData: any[] = [];
+        const allRangeData: any[] = [];
         
         // 각 날짜별로 모든 데이터 가져오기 (페이지네이션)
-        for (const date of novDates) {
+        for (const date of dateList) {
           let hasMore = true;
           let page = 0;
           const pageSize = 1000;
           
-          // "2025-11-01" 형식으로 모든 페이지 가져오기
+          // "2025-10-31" 형식으로 모든 페이지 가져오기
           while (hasMore) {
             const { data: dashData, error: dashError } = await supabase
               .from('whale_transactions')
@@ -161,17 +167,17 @@ export async function GET(request: Request) {
               console.warn(`⚠️ ${date} 대시 형식 데이터 로드 오류 (페이지 ${page}):`, dashError);
               hasMore = false;
             } else if (dashData && dashData.length > 0) {
-              allNovData.push(...dashData);
-              hasMore = dashData.length === pageSize; // 더 많은 데이터가 있을 수 있음
+              allRangeData.push(...dashData);
+              hasMore = dashData.length === pageSize;
               page++;
-              console.log(`  ${date} 대시 형식: ${dashData.length}개 로드 (총 ${allNovData.length}개)`);
+              console.log(`  ${date} 대시 형식: ${dashData.length}개 로드 (총 ${allRangeData.length}개)`);
             } else {
               hasMore = false;
             }
           }
           
-          // "2025.11.1" 형식 (날짜를 점 형식으로 변환)
-          const dotDate = date.replace(/-/g, '.').replace(/\.0([1-8])/, '.$1'); // "2025.11.1" 형식
+          // "2025.10.31" 형식 (날짜를 점 형식으로 변환)
+          const dotDate = date.replace(/-/g, '.').replace(/\.0([1-9])/, '.$1');
           hasMore = true;
           page = 0;
           
@@ -186,76 +192,166 @@ export async function GET(request: Request) {
               console.warn(`⚠️ ${dotDate} 점 형식 데이터 로드 오류 (페이지 ${page}):`, dotError);
               hasMore = false;
             } else if (dotData && dotData.length > 0) {
-              allNovData.push(...dotData);
+              allRangeData.push(...dotData);
               hasMore = dotData.length === pageSize;
               page++;
-              console.log(`  ${dotDate} 점 형식: ${dotData.length}개 로드 (총 ${allNovData.length}개)`);
+              console.log(`  ${dotDate} 점 형식: ${dotData.length}개 로드 (총 ${allRangeData.length}개)`);
             } else {
               hasMore = false;
             }
           }
         }
         
-        if (allNovData.length > 0) {
-          // 중복 제거 (tx_hash나 고유 키가 있다면 사용, 없으면 block_timestamp + amount_usd 조합 사용)
+        if (allRangeData.length > 0) {
+          // 중복 제거
           const uniqueData = Array.from(
-            new Map(allNovData.map((row, idx) => {
-              // 고유 키 생성 (block_timestamp + amount_usd + 인덱스)
+            new Map(allRangeData.map((row, idx) => {
               const key = `${row.block_timestamp}_${row.amount_usd}_${idx}`;
               return [key, row];
             })).values()
           );
           
           whaleData = uniqueData;
-          
-          console.log(`✅ Supabase에서 11월 1일~8일 데이터 ${whaleData.length}개 로드 완료 (중복 제거 전: ${allNovData.length}개)`);
-          
-          // 캐시에 저장
-          saveCache(whaleData);
+          console.log(`✅ Supabase에서 ${startDate} ~ ${endDate} 범위 데이터 ${whaleData.length}개 로드 완료 (중복 제거 전: ${allRangeData.length}개)`);
         } else {
-          // 폴백: 전체 데이터 가져오기 (최신부터)
-          console.log('⚠️ 11월 데이터가 없어 전체 데이터 로드 시도...');
-          const { data, error } = await supabase
-            .from('whale_transactions')
-            .select('block_timestamp, amount_usd, coin_symbol')
-            .order('id', { ascending: false })
-            .limit(100000);
+          console.warn(`⚠️ ${startDate} ~ ${endDate} 범위에 데이터가 없습니다.`);
+        }
+      }
+    }
+    
+    // 11월 1일~8일 데이터를 직접 필터링해서 가져오기 (기본 동작)
+    if (whaleData.length === 0) {
+      try {
+        // 먼저 캐시 확인
+        const cache = loadCache();
+        if (cache && cache.data.length > 0) {
+          whaleData = cache.data;
+          console.log(`✅ 캐시에서 11월 1일~8일 데이터 ${whaleData.length}개 로드 완료`);
+        } else {
+          console.log('🔄 Supabase에서 고래 거래 데이터 로드 중...');
           
-          if (error) {
-            console.error('❌ Supabase 데이터 로드 오류:', error);
-            throw error;
+          // 11월 1일~8일 데이터를 직접 필터링해서 가져오기
+          // "2025-11-01" ~ "2025-11-08" 형식과 "2025.11.1" ~ "2025.11.8" 형식 모두 포함
+          // 두 개의 쿼리로 분리해서 실행 (Supabase의 .or() 문법이 불안정할 수 있음)
+          
+          // 11월 1일~8일 데이터를 페이지네이션으로 모두 가져오기
+          const novDates = ['2025-11-01', '2025-11-02', '2025-11-03', '2025-11-04', '2025-11-05', '2025-11-06', '2025-11-07', '2025-11-08'];
+          const allNovData: any[] = [];
+          
+          // 각 날짜별로 모든 데이터 가져오기 (페이지네이션)
+          for (const date of novDates) {
+            let hasMore = true;
+            let page = 0;
+            const pageSize = 1000;
+            
+            // "2025-11-01" 형식으로 모든 페이지 가져오기
+            while (hasMore) {
+              const { data: dashData, error: dashError } = await supabase
+                .from('whale_transactions')
+                .select('block_timestamp, amount_usd, coin_symbol')
+                .like('block_timestamp', `${date}%`)
+                .range(page * pageSize, (page + 1) * pageSize - 1);
+              
+              if (dashError) {
+                console.warn(`⚠️ ${date} 대시 형식 데이터 로드 오류 (페이지 ${page}):`, dashError);
+                hasMore = false;
+              } else if (dashData && dashData.length > 0) {
+                allNovData.push(...dashData);
+                hasMore = dashData.length === pageSize; // 더 많은 데이터가 있을 수 있음
+                page++;
+                console.log(`  ${date} 대시 형식: ${dashData.length}개 로드 (총 ${allNovData.length}개)`);
+              } else {
+                hasMore = false;
+              }
+            }
+            
+            // "2025.11.1" 형식 (날짜를 점 형식으로 변환)
+            const dotDate = date.replace(/-/g, '.').replace(/\.0([1-8])/, '.$1'); // "2025.11.1" 형식
+            hasMore = true;
+            page = 0;
+            
+            while (hasMore) {
+              const { data: dotData, error: dotError } = await supabase
+                .from('whale_transactions')
+                .select('block_timestamp, amount_usd, coin_symbol')
+                .like('block_timestamp', `${dotDate}%`)
+                .range(page * pageSize, (page + 1) * pageSize - 1);
+              
+              if (dotError) {
+                console.warn(`⚠️ ${dotDate} 점 형식 데이터 로드 오류 (페이지 ${page}):`, dotError);
+                hasMore = false;
+              } else if (dotData && dotData.length > 0) {
+                allNovData.push(...dotData);
+                hasMore = dotData.length === pageSize;
+                page++;
+                console.log(`  ${dotDate} 점 형식: ${dotData.length}개 로드 (총 ${allNovData.length}개)`);
+              } else {
+                hasMore = false;
+              }
+            }
           }
           
-          if (data && data.length > 0) {
-            whaleData = data;
-            console.log(`✅ Supabase에서 전체 데이터 ${whaleData.length}개 로드 완료`);
+          if (allNovData.length > 0) {
+            // 중복 제거 (tx_hash나 고유 키가 있다면 사용, 없으면 block_timestamp + amount_usd 조합 사용)
+            const uniqueData = Array.from(
+              new Map(allNovData.map((row, idx) => {
+                // 고유 키 생성 (block_timestamp + amount_usd + 인덱스)
+                const key = `${row.block_timestamp}_${row.amount_usd}_${idx}`;
+                return [key, row];
+              })).values()
+            );
+            
+            whaleData = uniqueData;
+            
+            console.log(`✅ Supabase에서 11월 1일~8일 데이터 ${whaleData.length}개 로드 완료 (중복 제거 전: ${allNovData.length}개)`);
+            
+            // 캐시에 저장
+            saveCache(whaleData);
           } else {
-            console.warn('⚠️ Supabase에 고래 거래 데이터가 없습니다. CSV 폴백 시도...');
-            // 폴백: CSV 파일 사용
-            try {
-              whaleData = loadCSV('whale_transactions_rows.csv');
-            } catch (e) {
-              console.warn('고래 거래 데이터 CSV 로드 실패:', e);
+            // 폴백: 전체 데이터 가져오기 (최신부터)
+            console.log('⚠️ 11월 데이터가 없어 전체 데이터 로드 시도...');
+            const { data, error } = await supabase
+              .from('whale_transactions')
+              .select('block_timestamp, amount_usd, coin_symbol')
+              .order('id', { ascending: false })
+              .limit(100000);
+            
+            if (error) {
+              console.error('❌ Supabase 데이터 로드 오류:', error);
+              throw error;
+            }
+            
+            if (data && data.length > 0) {
+              whaleData = data;
+              console.log(`✅ Supabase에서 전체 데이터 ${whaleData.length}개 로드 완료`);
+            } else {
+              console.warn('⚠️ Supabase에 고래 거래 데이터가 없습니다. CSV 폴백 시도...');
+              // 폴백: CSV 파일 사용
               try {
-                whaleData = loadCSV('whale_transactions_rows_ETH_rev1.csv');
-              } catch (e2) {
-                console.warn('고래 거래 데이터 폴백 로드 실패:', e2);
+                whaleData = loadCSV('whale_transactions_rows.csv');
+              } catch (e) {
+                console.warn('고래 거래 데이터 CSV 로드 실패:', e);
+                try {
+                  whaleData = loadCSV('whale_transactions_rows_ETH_rev1.csv');
+                } catch (e2) {
+                  console.warn('고래 거래 데이터 폴백 로드 실패:', e2);
+                }
               }
             }
           }
         }
-      }
-    } catch (e) {
-      console.warn('고래 거래 데이터 로드 실패:', e);
-      // 폴백: CSV 파일 사용
-      try {
-        whaleData = loadCSV('whale_transactions_rows.csv');
-      } catch (e2) {
-        console.warn('고래 거래 데이터 CSV 로드 실패:', e2);
+      } catch (e) {
+        console.warn('고래 거래 데이터 로드 실패:', e);
+        // 폴백: CSV 파일 사용
         try {
-          whaleData = loadCSV('whale_transactions_rows_ETH_rev1.csv');
-        } catch (e3) {
-          console.warn('고래 거래 데이터 폴백 로드 실패:', e3);
+          whaleData = loadCSV('whale_transactions_rows.csv');
+        } catch (e2) {
+          console.warn('고래 거래 데이터 CSV 로드 실패:', e2);
+          try {
+            whaleData = loadCSV('whale_transactions_rows_ETH_rev1.csv');
+          } catch (e3) {
+            console.warn('고래 거래 데이터 폴백 로드 실패:', e3);
+          }
         }
       }
     }

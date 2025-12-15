@@ -78,11 +78,28 @@ const RealTimeChart: React.FC<RealTimeChartProps> = ({ dataPath }) => {
     }
   };
 
-  const loadRealData = async () => {
+  const loadRealData = async (customDate?: string) => {
     setLoading(true);
     try {
+      // 날짜가 선택되었고 11/1 이전이면 해당 날짜 범위로 데이터 가져오기
+      let apiUrl = `/api/timeseries?range=${timeRange}`;
+      
+      if (customDate) {
+        const selectedDateObj = new Date(customDate);
+        const nov1Start = new Date('2025-11-01T00:00:00.000Z');
+        
+        // 11/1 이전 날짜를 선택한 경우
+        if (selectedDateObj < nov1Start) {
+          // 선택한 날짜부터 11/1 전날까지의 범위로 데이터 요청
+          const endDate = new Date(nov1Start);
+          endDate.setDate(endDate.getDate() - 1); // 10/31
+          apiUrl = `/api/timeseries?startDate=${customDate}&endDate=${endDate.toISOString().split('T')[0]}`;
+          console.log(`📅 11/1 이전 날짜 선택: ${customDate} ~ ${endDate.toISOString().split('T')[0]} 범위로 데이터 요청`);
+        }
+      }
+      
       // API에서 실제 데이터 로드
-      const response = await fetch(`/api/timeseries?range=${timeRange}`);
+      const response = await fetch(apiUrl);
       
       if (!response.ok) {
         throw new Error(`데이터 로딩 실패: ${response.status} ${response.statusText}`);
@@ -312,9 +329,21 @@ const RealTimeChart: React.FC<RealTimeChartProps> = ({ dataPath }) => {
   };
 
   // 날짜 선택 핸들러
-  const handleDateChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setSelectedDate(e.target.value);
+  const handleDateChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const newDate = e.target.value;
+    setSelectedDate(newDate);
     setViewStartIndex(0); // 날짜 선택 시 드래그 위치 리셋
+    
+    // 11/1 이전 날짜를 선택한 경우 Supabase에서 데이터 다시 가져오기
+    if (newDate) {
+      const selectedDateObj = new Date(newDate);
+      const nov1Start = new Date('2025-11-01T00:00:00.000Z');
+      
+      if (selectedDateObj < nov1Start) {
+        console.log(`📅 11/1 이전 날짜 선택됨: ${newDate}, Supabase에서 데이터 로드 시작`);
+        await loadRealData(newDate);
+      }
+    }
   };
 
   const generateDummyData = (range: string): ChartDataPoint[] => {
@@ -545,6 +574,7 @@ const RealTimeChart: React.FC<RealTimeChartProps> = ({ dataPath }) => {
               type="date"
               value={selectedDate}
               onChange={handleDateChange}
+              max="2025-11-08"
               className="bg-transparent text-gray-300 text-sm border-none outline-none cursor-pointer"
               style={{ colorScheme: 'dark' }}
             />
