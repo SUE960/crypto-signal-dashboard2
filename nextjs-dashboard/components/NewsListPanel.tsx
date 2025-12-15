@@ -170,18 +170,14 @@ const NewsListPanel: React.FC = () => {
     return '📊';
   };
 
-  const getTimeAgo = (timestamp: string) => {
-    const now = new Date();
-    const time = new Date(timestamp);
-    const diffMs = now.getTime() - time.getTime();
-    const diffMins = Math.floor(diffMs / 60000);
-    const diffHours = Math.floor(diffMins / 60);
-    const diffDays = Math.floor(diffHours / 24);
-
-    if (diffMins < 1) return '방금 전';
-    if (diffMins < 60) return `${diffMins}분 전`;
-    if (diffHours < 24) return `${diffHours}시간 전`;
-    return `${diffDays}일 전`;
+  const formatDate = (timestamp: string) => {
+    const date = new Date(timestamp);
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    const hours = String(date.getHours()).padStart(2, '0');
+    const minutes = String(date.getMinutes()).padStart(2, '0');
+    return `${year}-${month}-${day} ${hours}:${minutes}`;
   };
 
   if (loading) {
@@ -302,7 +298,7 @@ const NewsListPanel: React.FC = () => {
 
                 {/* 시간 */}
                 <p className="text-gray-500 text-xs">
-                  {getTimeAgo(item.timestamp)}
+                  {formatDate(item.timestamp)}
                 </p>
               </div>
 
