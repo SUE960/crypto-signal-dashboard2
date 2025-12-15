@@ -34,16 +34,48 @@ const NewsListPanel: React.FC = () => {
       const response = await fetch('/api/news/recent?limit=50');
       
       if (!response.ok) {
-        console.error('API 응답 실패:', response.status);
+        console.error('API 응답 실패:', response.status, response.statusText);
+        const errorText = await response.text();
+        console.error('에러 응답 내용:', errorText);
         setNews([]);
         return;
       }
       
       const data = await response.json();
-      if (Array.isArray(data) && data.length > 0) {
-        setNews(data);
-      } else {
-        console.warn('뉴스 데이터가 비어있습니다.');
+      console.log('API 응답 데이터:', {
+        isArray: Array.isArray(data),
+        length: Array.isArray(data) ? data.length : 'N/A',
+        hasError: data.error,
+        debug: data.debug
+      });
+      
+      // 에러가 있는 경우
+      if (data.error) {
+        console.error('API 에러:', data.error, data.debug);
+        setNews([]);
+        return;
+      }
+      
+      // 배열인 경우
+      if (Array.isArray(data)) {
+        if (data.length > 0) {
+          setNews(data);
+        } else {
+          console.warn('뉴스 데이터가 비어있습니다.');
+          setNews([]);
+        }
+      } 
+      // data.data 배열인 경우 (다른 API 형식)
+      else if (data.data && Array.isArray(data.data)) {
+        if (data.data.length > 0) {
+          setNews(data.data);
+        } else {
+          console.warn('뉴스 데이터가 비어있습니다.');
+          setNews([]);
+        }
+      }
+      else {
+        console.warn('예상하지 못한 데이터 형식:', data);
         setNews([]);
       }
     } catch (error) {
