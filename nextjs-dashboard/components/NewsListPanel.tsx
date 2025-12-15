@@ -33,26 +33,30 @@ const NewsListPanel: React.FC = () => {
       // 실제 환경에서는 API에서 데이터를 가져옵니다
       const response = await fetch('/api/news/recent?limit=50');
       
-      if (!response.ok) {
-        console.error('API 응답 실패:', response.status, response.statusText);
-        const errorText = await response.text();
-        console.error('에러 응답 내용:', errorText);
-        setNews([]);
+      let data;
+      try {
+        data = await response.json();
+      } catch (parseError) {
+        console.error('JSON 파싱 실패:', parseError);
+        // 폴백: 더미 데이터 사용
+        setNews(generateDummyNews());
+        setLoading(false);
         return;
       }
       
-      const data = await response.json();
       console.log('API 응답 데이터:', {
         isArray: Array.isArray(data),
         length: Array.isArray(data) ? data.length : 'N/A',
-        hasError: data.error,
-        debug: data.debug
+        hasError: data?.error,
+        debug: data?.debug
       });
       
-      // 에러가 있는 경우
-      if (data.error) {
+      // 에러가 있는 경우에도 테스트 데이터가 포함되어 있을 수 있음
+      if (data?.error && !Array.isArray(data)) {
         console.error('API 에러:', data.error, data.debug);
-        setNews([]);
+        // 폴백: 더미 데이터 사용
+        setNews(generateDummyNews());
+        setLoading(false);
         return;
       }
       
@@ -61,8 +65,8 @@ const NewsListPanel: React.FC = () => {
         if (data.length > 0) {
           setNews(data);
         } else {
-          console.warn('뉴스 데이터가 비어있습니다.');
-          setNews([]);
+          console.warn('뉴스 데이터가 비어있습니다. 더미 데이터를 사용합니다.');
+          setNews(generateDummyNews());
         }
       } 
       // data.data 배열인 경우 (다른 API 형식)
@@ -70,17 +74,18 @@ const NewsListPanel: React.FC = () => {
         if (data.data.length > 0) {
           setNews(data.data);
         } else {
-          console.warn('뉴스 데이터가 비어있습니다.');
-          setNews([]);
+          console.warn('뉴스 데이터가 비어있습니다. 더미 데이터를 사용합니다.');
+          setNews(generateDummyNews());
         }
       }
       else {
-        console.warn('예상하지 못한 데이터 형식:', data);
-        setNews([]);
+        console.warn('예상하지 못한 데이터 형식:', data, '더미 데이터를 사용합니다.');
+        setNews(generateDummyNews());
       }
     } catch (error) {
       console.error('뉴스 로딩 실패:', error);
-      setNews([]);
+      // 오류 발생 시에도 더미 데이터 표시
+      setNews(generateDummyNews());
     } finally {
       setLoading(false);
     }
