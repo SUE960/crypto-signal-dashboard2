@@ -4,6 +4,9 @@ import fs from 'fs';
 import path from 'path';
 import papa from 'papaparse';
 
+// 동적 렌더링 강제 (request.url 사용)
+export const dynamic = 'force-dynamic';
+
 export async function GET(req: Request) {
   const { searchParams } = new URL(req.url);
 

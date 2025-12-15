@@ -3,6 +3,9 @@ import fs from 'fs';
 import path from 'path';
 import { parse } from 'csv-parse/sync';
 
+// 동적 렌더링 강제 (request.url 사용)
+export const dynamic = 'force-dynamic';
+
 export async function GET(request: Request) {
   try {
     // URL 파라미터에서 limit 추출

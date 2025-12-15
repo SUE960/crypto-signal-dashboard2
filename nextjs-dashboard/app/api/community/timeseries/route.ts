@@ -3,6 +3,9 @@ import { parse } from 'csv-parse/sync';
 import fs from 'fs';
 import path from 'path';
 
+// 동적 렌더링 강제 (request.url 사용)
+export const dynamic = 'force-dynamic';
+
 function loadCSV(relativeFile: string) {
   // nextjs-dashboard -> 상위 폴더 -> data -> 파일
   const fullPath = path.join(process.cwd(), '..', 'data', relativeFile);

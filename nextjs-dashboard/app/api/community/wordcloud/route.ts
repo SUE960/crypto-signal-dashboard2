@@ -3,6 +3,9 @@ import fs from 'fs';
 import path from 'path';
 import Papa from 'papaparse';
 
+// 동적 렌더링 강제 (request.url 사용)
+export const dynamic = 'force-dynamic';
+
 function parseCSV(filePath: string): Promise<any[]> {
   return new Promise((resolve) => {
     const file = fs.readFileSync(filePath, 'utf-8');
