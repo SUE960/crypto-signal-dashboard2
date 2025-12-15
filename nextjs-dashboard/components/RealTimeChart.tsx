@@ -48,7 +48,7 @@ const RealTimeChart: React.FC<RealTimeChartProps> = ({ dataPath }) => {
   const [data, setData] = useState<ChartDataPoint[]>([]);
   const [spikePoints, setSpikePoints] = useState<SpikePoint[]>([]);
   const [loading, setLoading] = useState(true);
-  const [timeRange, setTimeRange] = useState<'7d' | '30d' | '90d'>('30d');
+  const [timeRange, setTimeRange] = useState<'7d' | '30d' | '90d'>('7d');
   const [chartType, setChartType] = useState<'line' | 'area' | 'composed'>('composed');
   const [selectedCoin, setSelectedCoin] = useState<'btc' | 'eth' | 'both'>('both');
   const [selectedDate, setSelectedDate] = useState<string>('');
@@ -311,27 +311,6 @@ const RealTimeChart: React.FC<RealTimeChartProps> = ({ dataPath }) => {
 
         {/* 오른쪽: 컨트롤들 */}
         <div className="flex flex-wrap gap-3 items-center">
-          {/* 기간 선택 */}
-          <div className="flex gap-2 bg-gray-800 p-1 rounded-lg">
-            {(['7d', '30d', '90d'] as const).map((range) => (
-              <button
-                key={range}
-                onClick={() => {
-                  setTimeRange(range);
-                  setSelectedDate(''); // 범위 변경 시 날짜 선택 리셋
-                  setViewStartIndex(0); // 범위 변경 시 드래그 위치 리셋
-                }}
-                className={`px-3 py-1.5 rounded-md font-medium text-sm transition-all ${
-                  timeRange === range
-                    ? 'bg-blue-600 text-white shadow-lg'
-                    : 'text-gray-400 hover:text-white'
-                }`}
-              >
-                {range === '7d' ? '7일' : range === '30d' ? '30일' : '90일'}
-              </button>
-            ))}
-          </div>
-
           {/* 코인 */}
           <div className="flex gap-2 bg-gray-800 p-1 rounded-lg">
             {([
