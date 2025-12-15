@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import {
   LineChart,
   Line,
@@ -137,26 +137,24 @@ const RealTimeChart: React.FC<RealTimeChartProps> = ({ dataPath }) => {
       return sortedData.slice(viewStartIndex);
     }
     
-    // 기본값: 가장 최신 데이터부터 표시 (7일 범위)
-    // 최신 날짜 기준으로 7일 전까지의 데이터만 표시
+    // 기본값: 11월 1일부터 11월 8일까지의 데이터 표시
     if (sortedData.length > 0) {
-      const latestDate = new Date(sortedData[sortedData.length - 1].timestamp);
-      const sevenDaysAgo = new Date(latestDate);
-      sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
-      sevenDaysAgo.setHours(0, 0, 0, 0);
+      // 11월 1일 00:00:00
+      const nov1Start = new Date('2025-11-01T00:00:00.000Z').getTime();
+      // 11월 8일 23:59:59
+      const nov8End = new Date('2025-11-08T23:59:59.999Z').getTime();
       
-      const sevenDaysAgoTime = sevenDaysAgo.getTime();
-      const startIndex = sortedData.findIndex(
-        (d) => new Date(d.timestamp).getTime() >= sevenDaysAgoTime
-      );
+      const filtered = sortedData.filter((d) => {
+        const timestamp = new Date(d.timestamp).getTime();
+        return timestamp >= nov1Start && timestamp <= nov8End;
+      });
       
-      // 7일 범위를 찾은 경우
-      if (startIndex >= 0 && startIndex < sortedData.length) {
-        return sortedData.slice(startIndex);
+      // 11월 1일~8일 데이터가 있으면 반환
+      if (filtered.length > 0) {
+        return filtered;
       }
       
-      // 7일 범위를 찾지 못한 경우, 최신 데이터부터 최대 200개 표시
-      // 또는 데이터가 적으면 전체 표시
+      // 11월 1일~8일 데이터가 없으면, 최신 데이터부터 최대 200개 표시
       return sortedData.slice(-Math.min(200, sortedData.length));
     }
     
@@ -165,6 +163,103 @@ const RealTimeChart: React.FC<RealTimeChartProps> = ({ dataPath }) => {
   };
 
   const filteredData = getFilteredData();
+  
+  // 일별로 집계된 데이터 생성 (11월 1일~8일)
+  const dailyAggregatedData = useMemo(() => {
+    if (filteredData.length === 0) return [];
+    
+    // 11월 1일~8일 데이터만 필터링
+    const nov1Start = new Date('2025-11-01T00:00:00.000Z').getTime();
+    const nov8End = new Date('2025-11-08T23:59:59.999Z').getTime();
+    
+    const novData = filteredData.filter(d => {
+      const timestamp = new Date(d.timestamp).getTime();
+      return timestamp >= nov1Start && timestamp <= nov8End;
+    });
+    
+    console.log('📊 일별 집계 - 필터링된 11월 데이터:', {
+      총개수: novData.length,
+      샘플: novData.slice(0, 3).map(d => ({
+        timestamp: d.timestamp,
+        whale_tx_count: d.whale_tx_count,
+        date: new Date(d.timestamp).toLocaleDateString('ko-KR')
+      }))
+    });
+    
+    if (novData.length === 0) {
+      console.warn('⚠️ 11월 1일~8일 데이터가 없습니다');
+      return filteredData; // 11월 데이터가 없으면 원본 반환
+    }
+    
+    // 날짜별로 그룹화
+    const dailyMap = new Map<string, {
+      timestamp: string;
+      date: string;
+      whale_tx_count: number;
+      whale_volume_sum: number;
+      btc_close: number;
+      eth_close: number;
+      btc_change: number;
+      eth_change: number;
+      count: number; // 해당 날짜의 시간대 개수
+    }>();
+    
+    novData.forEach(d => {
+      const date = new Date(d.timestamp);
+      // 날짜만 추출 (시간 제거)
+      const year = date.getFullYear();
+      const month = String(date.getMonth() + 1).padStart(2, '0');
+      const day = String(date.getDate()).padStart(2, '0');
+      const dateKey = `${year}-${month}-${day}`;
+      
+      const existing = dailyMap.get(dateKey);
+      if (existing) {
+        existing.whale_tx_count += d.whale_tx_count;
+        existing.whale_volume_sum += d.whale_volume_sum;
+        existing.btc_close = d.btc_close || existing.btc_close; // 마지막 값 사용
+        existing.eth_close = d.eth_close || existing.eth_close;
+        existing.btc_change = d.btc_change || existing.btc_change;
+        existing.eth_change = d.eth_change || existing.eth_change;
+        existing.count += 1;
+      } else {
+        dailyMap.set(dateKey, {
+          timestamp: `${dateKey}T12:00:00.000Z`, // 정오 시간으로 설정
+          date: `${date.getMonth() + 1}/${date.getDate()}`,
+          whale_tx_count: d.whale_tx_count,
+          whale_volume_sum: d.whale_volume_sum,
+          btc_close: d.btc_close,
+          eth_close: d.eth_close,
+          btc_change: d.btc_change,
+          eth_change: d.eth_change,
+          count: 1
+        });
+      }
+    });
+    
+    // Map을 배열로 변환하고 날짜순 정렬
+    const result = Array.from(dailyMap.values())
+      .sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime());
+    
+    console.log('✅ 일별 집계 완료:', {
+      일수: result.length,
+      일별데이터: result.map(d => ({
+        date: d.date,
+        whale_tx_count: d.whale_tx_count,
+        시간대개수: d.count
+      }))
+    });
+    
+    return result;
+  }, [filteredData]);
+  
+  // 차트에 표시할 데이터: 11월 1일~8일이면 일별 집계 데이터, 아니면 시간별 데이터
+  const chartData = useMemo(() => {
+    if (dailyAggregatedData.length > 0 && dailyAggregatedData.length <= 8) {
+      // 11월 1일~8일 데이터가 있고 8일 이하면 일별 집계 사용
+      return dailyAggregatedData;
+    }
+    return filteredData;
+  }, [dailyAggregatedData, filteredData]);
   
   // 디버깅: 데이터 상태 확인
   useEffect(() => {
@@ -180,7 +275,8 @@ const RealTimeChart: React.FC<RealTimeChartProps> = ({ dataPath }) => {
   }, [data.length, filteredData.length, timeRange, selectedDate, viewStartIndex]);
 
   // 필터링된 데이터가 없으면 원본 데이터 사용 (더미 데이터 사용 안 함)
-  let displayData = filteredData.length > 0 ? filteredData : data;
+  // 11월 1일~8일 데이터가 있으면 일별 집계 데이터 사용
+  let displayData = chartData.length > 0 ? chartData : (filteredData.length > 0 ? filteredData : data);
 
   // 데이터와 Spike 포인트 매칭
   const dataWithSpikes = displayData.map((point) => {
@@ -338,6 +434,7 @@ const RealTimeChart: React.FC<RealTimeChartProps> = ({ dataPath }) => {
               </span>
             </div>
           ))}
+          
         </div>
       </div>
     );
@@ -492,7 +589,7 @@ const RealTimeChart: React.FC<RealTimeChartProps> = ({ dataPath }) => {
                 stroke="#a855f7"
                 style={{ fontSize: '11px' }}
                 tick={{ fill: '#a855f7' }}
-                domain={['auto', 'auto']}
+                domain={[0, 'dataMax']}
                 allowDataOverflow={false}
                 label={{
                   value: '고래 거래 (건)',
@@ -552,14 +649,14 @@ const RealTimeChart: React.FC<RealTimeChartProps> = ({ dataPath }) => {
                 );
               })}
 
-              {/* 고래 거래 (막대 그래프) */}
+              {/* 고래 거래 (막대 그래프 - 건수) */}
               <Bar
                 yAxisId="left"
                 dataKey="whale_tx_count"
                 fill="#a855f7"
                 opacity={0.8}
                 radius={[4, 4, 0, 0]}
-                name="고래 거래"
+                name="고래 거래 (건)"
               />
 
               {/* BTC */}
@@ -613,8 +710,15 @@ const RealTimeChart: React.FC<RealTimeChartProps> = ({ dataPath }) => {
                 yAxisId="left" 
                 stroke="#a855f7" 
                 style={{ fontSize: '11px' }}
-                domain={['auto', 'auto']}
+                domain={[0, 'dataMax']}
                 allowDataOverflow={false}
+                label={{
+                  value: '고래 거래 (건)',
+                  angle: -90,
+                  position: 'insideLeft',
+                  fill: '#a855f7',
+                  style: { fontSize: '12px' }
+                }}
               />
               <YAxis 
                 yAxisId="right" 
@@ -624,6 +728,8 @@ const RealTimeChart: React.FC<RealTimeChartProps> = ({ dataPath }) => {
                 domain={['auto', 'auto']}
                 allowDataOverflow={false}
               />
+              
+              
               <Tooltip content={<CustomTooltip spikePoints={spikePoints} />} />
               <Legend wrapperStyle={{ paddingTop: '20px' }} />
               
@@ -659,8 +765,9 @@ const RealTimeChart: React.FC<RealTimeChartProps> = ({ dataPath }) => {
                 fill="#a855f7"
                 opacity={0.8}
                 radius={[4, 4, 0, 0]}
-                name="고래 거래"
+                name="고래 거래 (건)"
               />
+              
               
               {selectedCoin !== 'eth' && (
                 <Area
@@ -696,8 +803,15 @@ const RealTimeChart: React.FC<RealTimeChartProps> = ({ dataPath }) => {
                 yAxisId="left" 
                 stroke="#a855f7" 
                 style={{ fontSize: '11px' }}
-                domain={['auto', 'auto']}
+                domain={[0, 'dataMax']}
                 allowDataOverflow={false}
+                label={{
+                  value: '고래 거래 (건)',
+                  angle: -90,
+                  position: 'insideLeft',
+                  fill: '#a855f7',
+                  style: { fontSize: '12px' }
+                }}
               />
               <YAxis 
                 yAxisId="right" 
@@ -707,6 +821,8 @@ const RealTimeChart: React.FC<RealTimeChartProps> = ({ dataPath }) => {
                 domain={['auto', 'auto']}
                 allowDataOverflow={false}
               />
+              
+              
               <Tooltip content={<CustomTooltip spikePoints={spikePoints} />} />
               <Legend wrapperStyle={{ paddingTop: '20px' }} />
               
@@ -736,14 +852,15 @@ const RealTimeChart: React.FC<RealTimeChartProps> = ({ dataPath }) => {
                 );
               })}
 
-                     <Bar
-                       yAxisId="left"
-                       dataKey="whale_tx_count"
-                       fill="#a855f7"
-                       opacity={0.8}
-                       radius={[4, 4, 0, 0]}
-                       name="고래 거래"
-                     />
+              <Bar
+                yAxisId="left"
+                dataKey="whale_tx_count"
+                fill="#a855f7"
+                opacity={0.8}
+                radius={[4, 4, 0, 0]}
+                name="고래 거래 (건)"
+              />
+              
               
               {selectedCoin !== 'eth' && (
                 <Line
@@ -791,9 +908,25 @@ const RealTimeChart: React.FC<RealTimeChartProps> = ({ dataPath }) => {
       {/* 통계 카드들 */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
         <div className="bg-gradient-to-br from-purple-900/40 to-purple-800/20 border border-purple-600/50 rounded-xl p-4 hover:shadow-lg hover:shadow-purple-500/20 transition-all">
-          <div className="text-purple-300 text-xs font-medium mb-2">평균 고래 거래</div>
+          <div className="text-purple-300 text-xs font-medium mb-2">평균 고래 거래 (11/1-11/8)</div>
           <div className="text-white text-3xl font-bold">
-            {(data.reduce((sum, d) => sum + d.whale_tx_count, 0) / data.length).toFixed(0)}
+            {(() => {
+              if (data.length === 0) return '0';
+              
+              // 11월 1일~8일 데이터 필터링
+              const nov1Start = new Date('2025-11-01T00:00:00.000Z').getTime();
+              const nov8End = new Date('2025-11-08T23:59:59.999Z').getTime();
+              
+              const novData = data.filter(d => {
+                const timestamp = new Date(d.timestamp).getTime();
+                return timestamp >= nov1Start && timestamp <= nov8End && d.whale_tx_count > 0;
+              });
+              
+              if (novData.length === 0) return '0';
+              
+              const avg = novData.reduce((sum, d) => sum + d.whale_tx_count, 0) / novData.length;
+              return avg.toFixed(0);
+            })()}
             <span className="text-purple-400 text-lg ml-1">건</span>
           </div>
         </div>

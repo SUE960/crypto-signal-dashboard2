@@ -9,6 +9,7 @@
     "lint": "next lint"
   },
   "dependencies": {
+    "@supabase/supabase-js": "^2.87.1",
     "@types/react-date-range": "^1.4.10",
     "@visx/scale": "^3.12.0",
     "@visx/text": "^3.12.0",
