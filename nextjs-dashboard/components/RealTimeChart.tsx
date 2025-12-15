@@ -48,7 +48,7 @@ const RealTimeChart: React.FC<RealTimeChartProps> = ({ dataPath }) => {
   const [data, setData] = useState<ChartDataPoint[]>([]);
   const [spikePoints, setSpikePoints] = useState<SpikePoint[]>([]);
   const [loading, setLoading] = useState(true);
-  const [timeRange, setTimeRange] = useState<'7d' | '30d' | '90d'>('30d');
+  const [timeRange, setTimeRange] = useState<'7d' | '30d' | '90d'>('7d');
   const [chartType, setChartType] = useState<'line' | 'area' | 'composed'>('composed');
   const [selectedCoin, setSelectedCoin] = useState<'btc' | 'eth' | 'both'>('both');
   const [selectedDate, setSelectedDate] = useState<string>('');
@@ -61,6 +61,7 @@ const RealTimeChart: React.FC<RealTimeChartProps> = ({ dataPath }) => {
       await loadRealData();
       await loadSpikePoints();
       setViewStartIndex(0); // 범위 변경 시 리셋
+      setSelectedDate(''); // 날짜 선택도 리셋하여 최신 데이터 표시
     };
     loadData();
   }, [timeRange]);
@@ -84,15 +85,27 @@ const RealTimeChart: React.FC<RealTimeChartProps> = ({ dataPath }) => {
       const response = await fetch(`/api/timeseries?range=${timeRange}`);
       
       if (!response.ok) {
-        throw new Error('데이터 로딩 실패');
+        throw new Error(`데이터 로딩 실패: ${response.status} ${response.statusText}`);
       }
       
       const jsonData = await response.json();
-      setData(jsonData);
+      console.log('API에서 받은 데이터:', {
+        개수: Array.isArray(jsonData) ? jsonData.length : 0,
+        첫번째데이터: Array.isArray(jsonData) && jsonData.length > 0 ? jsonData[0] : null,
+        마지막데이터: Array.isArray(jsonData) && jsonData.length > 0 ? jsonData[jsonData.length - 1] : null
+      });
+      
+      if (Array.isArray(jsonData) && jsonData.length > 0) {
+        // 실제 데이터 사용
+        setData(jsonData);
+        console.log('✅ 실제 데이터 로드 완료:', jsonData.length, '개');
+      } else {
+        console.error('❌ API에서 빈 데이터를 받았습니다.');
+        setData([]); // 빈 배열로 설정 (더미 데이터 사용 안 함)
+      }
     } catch (error) {
-      console.error('데이터 로딩 중 오류:', error);
-      // 에러 시 더미 데이터 사용
-      setData(generateDummyData(timeRange));
+      console.error('❌ 데이터 로딩 중 오류:', error);
+      setData([]); // 에러 시에도 빈 배열로 설정 (더미 데이터 사용 안 함)
     } finally {
       setLoading(false);
     }
@@ -102,29 +115,75 @@ const RealTimeChart: React.FC<RealTimeChartProps> = ({ dataPath }) => {
   const getFilteredData = () => {
     if (data.length === 0) return [];
     
+    // API에서 이미 최신 데이터부터 정렬되어 오므로, 그대로 사용
+    // 필요시 시간순으로 재정렬 (오름차순)
+    const sortedData = [...data].sort((a, b) => 
+      new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime()
+    );
+    
     // 날짜가 선택된 경우
     if (selectedDate) {
       const selectedTimestamp = new Date(selectedDate).getTime();
-      const selectedIndex = data.findIndex(
+      const selectedIndex = sortedData.findIndex(
         (d) => new Date(d.timestamp).getTime() >= selectedTimestamp
       );
       if (selectedIndex >= 0) {
-        return data.slice(selectedIndex);
+        return sortedData.slice(selectedIndex);
       }
     }
     
     // 드래그로 이동한 경우
     if (viewStartIndex > 0) {
-      return data.slice(viewStartIndex);
+      return sortedData.slice(viewStartIndex);
     }
     
+    // 기본값: 가장 최신 데이터부터 표시 (7일 범위)
+    // 최신 날짜 기준으로 7일 전까지의 데이터만 표시
+    if (sortedData.length > 0) {
+      const latestDate = new Date(sortedData[sortedData.length - 1].timestamp);
+      const sevenDaysAgo = new Date(latestDate);
+      sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+      sevenDaysAgo.setHours(0, 0, 0, 0);
+      
+      const sevenDaysAgoTime = sevenDaysAgo.getTime();
+      const startIndex = sortedData.findIndex(
+        (d) => new Date(d.timestamp).getTime() >= sevenDaysAgoTime
+      );
+      
+      // 7일 범위를 찾은 경우
+      if (startIndex >= 0 && startIndex < sortedData.length) {
+        return sortedData.slice(startIndex);
+      }
+      
+      // 7일 범위를 찾지 못한 경우, 최신 데이터부터 최대 200개 표시
+      // 또는 데이터가 적으면 전체 표시
+      return sortedData.slice(-Math.min(200, sortedData.length));
+    }
+    
+    // 정렬 실패한 경우, 원본 데이터 반환
     return data;
   };
 
   const filteredData = getFilteredData();
+  
+  // 디버깅: 데이터 상태 확인
+  useEffect(() => {
+    console.log('차트 데이터 상태:', {
+      원본데이터개수: data.length,
+      필터링된데이터개수: filteredData.length,
+      timeRange,
+      selectedDate,
+      viewStartIndex,
+      첫번째데이터: filteredData.length > 0 ? filteredData[0] : null,
+      마지막데이터: filteredData.length > 0 ? filteredData[filteredData.length - 1] : null
+    });
+  }, [data.length, filteredData.length, timeRange, selectedDate, viewStartIndex]);
+
+  // 필터링된 데이터가 없으면 원본 데이터 사용 (더미 데이터 사용 안 함)
+  let displayData = filteredData.length > 0 ? filteredData : data;
 
   // 데이터와 Spike 포인트 매칭
-  const dataWithSpikes = filteredData.map((point) => {
+  const dataWithSpikes = displayData.map((point) => {
     const spike = spikePoints.find(
       (sp) => new Date(sp.timestamp).getTime() === new Date(point.timestamp).getTime()
     );
@@ -167,7 +226,9 @@ const RealTimeChart: React.FC<RealTimeChartProps> = ({ dataPath }) => {
     const dataPoints: ChartDataPoint[] = [];
     const now = new Date();
 
-    for (let i = days * 24; i >= 0; i -= 24) { // 일별 데이터
+    // 시간별 데이터 생성 (더 많은 데이터 포인트)
+    const hours = days * 24;
+    for (let i = hours; i >= 0; i -= 1) { // 시간별 데이터
       const date = new Date(now);
       date.setHours(date.getHours() - i);
 
@@ -180,7 +241,7 @@ const RealTimeChart: React.FC<RealTimeChartProps> = ({ dataPath }) => {
         date: date.toLocaleDateString('ko-KR', { 
           month: 'numeric', 
           day: 'numeric',
-          ...(range === '90d' ? {} : { hour: '2-digit' })
+          hour: '2-digit'
         }),
         whale_tx_count: Math.round(baseWhale + Math.random() * 40),
         whale_volume_sum: Math.round((baseWhale + Math.random() * 50) * 150),
@@ -311,27 +372,6 @@ const RealTimeChart: React.FC<RealTimeChartProps> = ({ dataPath }) => {
 
         {/* 오른쪽: 컨트롤들 */}
         <div className="flex flex-wrap gap-3 items-center">
-          {/* 기간 선택 */}
-          <div className="flex gap-2 bg-gray-800 p-1 rounded-lg">
-            {(['7d', '30d', '90d'] as const).map((range) => (
-              <button
-                key={range}
-                onClick={() => {
-                  setTimeRange(range);
-                  setSelectedDate(''); // 범위 변경 시 날짜 선택 리셋
-                  setViewStartIndex(0); // 범위 변경 시 드래그 위치 리셋
-                }}
-                className={`px-3 py-1.5 rounded-md font-medium text-sm transition-all ${
-                  timeRange === range
-                    ? 'bg-blue-600 text-white shadow-lg'
-                    : 'text-gray-400 hover:text-white'
-                }`}
-              >
-                {range === '7d' ? '7일' : range === '30d' ? '30일' : '90일'}
-              </button>
-            ))}
-          </div>
-
           {/* 코인 */}
           <div className="flex gap-2 bg-gray-800 p-1 rounded-lg">
             {([
@@ -452,6 +492,8 @@ const RealTimeChart: React.FC<RealTimeChartProps> = ({ dataPath }) => {
                 stroke="#a855f7"
                 style={{ fontSize: '11px' }}
                 tick={{ fill: '#a855f7' }}
+                domain={['auto', 'auto']}
+                allowDataOverflow={false}
                 label={{
                   value: '고래 거래 (건)',
                   angle: -90,
@@ -467,6 +509,8 @@ const RealTimeChart: React.FC<RealTimeChartProps> = ({ dataPath }) => {
                 stroke="#60a5fa"
                 style={{ fontSize: '11px' }}
                 tick={{ fill: '#60a5fa' }}
+                domain={['auto', 'auto']}
+                allowDataOverflow={false}
                 label={{
                   value: '가격 ($)',
                   angle: 90,
@@ -508,21 +552,12 @@ const RealTimeChart: React.FC<RealTimeChartProps> = ({ dataPath }) => {
                 );
               })}
 
-              {/* 고래 거래 (영역 + 바) */}
-              <Area
-                yAxisId="left"
-                type="monotone"
-                dataKey="whale_tx_count"
-                fill="url(#whaleGradient)"
-                stroke="#a855f7"
-                strokeWidth={0}
-                name="고래 거래"
-              />
+              {/* 고래 거래 (막대 그래프) */}
               <Bar
                 yAxisId="left"
                 dataKey="whale_tx_count"
                 fill="#a855f7"
-                opacity={0.6}
+                opacity={0.8}
                 radius={[4, 4, 0, 0]}
                 name="고래 거래"
               />
@@ -574,8 +609,21 @@ const RealTimeChart: React.FC<RealTimeChartProps> = ({ dataPath }) => {
               
               <CartesianGrid strokeDasharray="3 3" stroke="#374151" opacity={0.5} />
               <XAxis dataKey="date" stroke="#9ca3af" style={{ fontSize: '11px' }} />
-              <YAxis yAxisId="left" stroke="#a855f7" style={{ fontSize: '11px' }} />
-              <YAxis yAxisId="right" orientation="right" stroke="#60a5fa" style={{ fontSize: '11px' }} />
+              <YAxis 
+                yAxisId="left" 
+                stroke="#a855f7" 
+                style={{ fontSize: '11px' }}
+                domain={['auto', 'auto']}
+                allowDataOverflow={false}
+              />
+              <YAxis 
+                yAxisId="right" 
+                orientation="right" 
+                stroke="#60a5fa" 
+                style={{ fontSize: '11px' }}
+                domain={['auto', 'auto']}
+                allowDataOverflow={false}
+              />
               <Tooltip content={<CustomTooltip spikePoints={spikePoints} />} />
               <Legend wrapperStyle={{ paddingTop: '20px' }} />
               
@@ -605,14 +653,12 @@ const RealTimeChart: React.FC<RealTimeChartProps> = ({ dataPath }) => {
                 );
               })}
 
-              <Area
+              <Bar
                 yAxisId="left"
-                type="monotone"
                 dataKey="whale_tx_count"
-                stroke="#a855f7"
-                fillOpacity={1}
-                fill="url(#colorWhale)"
-                strokeWidth={2}
+                fill="#a855f7"
+                opacity={0.8}
+                radius={[4, 4, 0, 0]}
                 name="고래 거래"
               />
               
@@ -646,8 +692,21 @@ const RealTimeChart: React.FC<RealTimeChartProps> = ({ dataPath }) => {
             <LineChart data={dataWithSpikes} margin={{ top: 10, right: 30, left: 20, bottom: 10 }}>
               <CartesianGrid strokeDasharray="3 3" stroke="#374151" opacity={0.5} />
               <XAxis dataKey="date" stroke="#9ca3af" style={{ fontSize: '11px' }} />
-              <YAxis yAxisId="left" stroke="#a855f7" style={{ fontSize: '11px' }} />
-              <YAxis yAxisId="right" orientation="right" stroke="#60a5fa" style={{ fontSize: '11px' }} />
+              <YAxis 
+                yAxisId="left" 
+                stroke="#a855f7" 
+                style={{ fontSize: '11px' }}
+                domain={['auto', 'auto']}
+                allowDataOverflow={false}
+              />
+              <YAxis 
+                yAxisId="right" 
+                orientation="right" 
+                stroke="#60a5fa" 
+                style={{ fontSize: '11px' }}
+                domain={['auto', 'auto']}
+                allowDataOverflow={false}
+              />
               <Tooltip content={<CustomTooltip spikePoints={spikePoints} />} />
               <Legend wrapperStyle={{ paddingTop: '20px' }} />
               
@@ -677,15 +736,14 @@ const RealTimeChart: React.FC<RealTimeChartProps> = ({ dataPath }) => {
                 );
               })}
 
-              <Line
-                yAxisId="left"
-                type="monotone"
-                dataKey="whale_tx_count"
-                stroke="#a855f7"
-                strokeWidth={3}
-                dot={false}
-                name="고래 거래"
-              />
+                     <Bar
+                       yAxisId="left"
+                       dataKey="whale_tx_count"
+                       fill="#a855f7"
+                       opacity={0.8}
+                       radius={[4, 4, 0, 0]}
+                       name="고래 거래"
+                     />
               
               {selectedCoin !== 'eth' && (
                 <Line
