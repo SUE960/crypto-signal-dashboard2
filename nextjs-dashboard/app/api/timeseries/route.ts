@@ -164,17 +164,19 @@ export async function GET(request: Request) {
 
     // 고래 거래 데이터 추가
     processedWhale.forEach((whale: any) => {
-      const hourKey = new Date(whale.timestamp).toISOString().slice(0, 13) + ':00:00';
+      // 시간을 정규화하여 매칭 (분과 초를 0으로 설정)
+      const whaleDate = new Date(whale.timestamp);
+      whaleDate.setMinutes(0, 0, 0);
+      const hourKey = whaleDate.toISOString();
       const existing = timeMap.get(hourKey);
       
       if (existing) {
         existing.whale_tx_count += whale.tx_count;
         existing.whale_volume_sum += whale.volume_sum;
       } else {
-        const ts = new Date(hourKey);
         timeMap.set(hourKey, {
-          timestamp: ts.toISOString(),
-          date: ts.toLocaleDateString('ko-KR', {
+          timestamp: hourKey,
+          date: whaleDate.toLocaleDateString('ko-KR', {
             month: 'numeric',
             day: 'numeric',
             ...(range === '90d' ? {} : { hour: '2-digit' }),
@@ -191,7 +193,10 @@ export async function GET(request: Request) {
 
     // BTC 가격 데이터 추가
     processedBtc.forEach((btc: any, idx: number) => {
-      const hourKey = new Date(btc.timestamp).toISOString().slice(0, 13) + ':00:00';
+      // 시간을 정규화하여 매칭 (분과 초를 0으로 설정)
+      const btcDate = new Date(btc.timestamp);
+      btcDate.setMinutes(0, 0, 0);
+      const hourKey = btcDate.toISOString();
       const existing = timeMap.get(hourKey);
       const prevPrice = idx > 0 ? processedBtc[idx - 1].close : btc.close;
 
@@ -199,10 +204,9 @@ export async function GET(request: Request) {
         existing.btc_close = btc.close;
         existing.btc_change = calculateChange(btc.close, prevPrice);
       } else {
-        const ts = new Date(hourKey);
         timeMap.set(hourKey, {
-          timestamp: ts.toISOString(),
-          date: ts.toLocaleDateString('ko-KR', {
+          timestamp: hourKey,
+          date: btcDate.toLocaleDateString('ko-KR', {
             month: 'numeric',
             day: 'numeric',
             ...(range === '90d' ? {} : { hour: '2-digit' }),
@@ -219,7 +223,10 @@ export async function GET(request: Request) {
 
     // ETH 가격 데이터 추가
     processedEth.forEach((eth: any, idx: number) => {
-      const hourKey = new Date(eth.timestamp).toISOString().slice(0, 13) + ':00:00';
+      // 시간을 정규화하여 매칭 (분과 초를 0으로 설정)
+      const ethDate = new Date(eth.timestamp);
+      ethDate.setMinutes(0, 0, 0);
+      const hourKey = ethDate.toISOString();
       const existing = timeMap.get(hourKey);
       const prevPrice = idx > 0 ? processedEth[idx - 1].close : eth.close;
 
@@ -227,10 +234,9 @@ export async function GET(request: Request) {
         existing.eth_close = eth.close;
         existing.eth_change = calculateChange(eth.close, prevPrice);
       } else {
-        const ts = new Date(hourKey);
         timeMap.set(hourKey, {
-          timestamp: ts.toISOString(),
-          date: ts.toLocaleDateString('ko-KR', {
+          timestamp: hourKey,
+          date: ethDate.toLocaleDateString('ko-KR', {
             month: 'numeric',
             day: 'numeric',
             ...(range === '90d' ? {} : { hour: '2-digit' }),
@@ -270,13 +276,23 @@ export async function GET(request: Request) {
       new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()
     );
 
+    // 고래 거래 데이터가 포함된 항목 개수 확인
+    const whaleDataCount = sortedResult.filter(p => p.whale_tx_count > 0).length;
+    
     console.log(`Timeseries API: ${sortedResult.length}개 데이터 반환`);
-    console.log(`  고래 데이터: ${processedWhale.length}개`);
+    console.log(`  고래 데이터: ${processedWhale.length}개 (병합 후 ${whaleDataCount}개 시간대에 포함)`);
     console.log(`  BTC 데이터: ${processedBtc.length}개`);
     console.log(`  ETH 데이터: ${processedEth.length}개`);
     if (sortedResult.length > 0) {
       console.log(`  최신: ${sortedResult[0]?.timestamp}`);
       console.log(`  최 old: ${sortedResult[sortedResult.length - 1]?.timestamp}`);
+      // 샘플 데이터 확인
+      const sampleWithWhale = sortedResult.find(p => p.whale_tx_count > 0);
+      if (sampleWithWhale) {
+        console.log(`  고래 거래 샘플: ${sampleWithWhale.timestamp} - ${sampleWithWhale.whale_tx_count}건`);
+      } else {
+        console.warn(`  ⚠️ 고래 거래 데이터가 포함된 항목이 없습니다!`);
+      }
     }
 
     return NextResponse.json(sortedResult);
