@@ -25,6 +25,9 @@ export default function WordCloud() {
   const [mounted, setMounted] = useState(false);
   const [showCalendar, setShowCalendar] = useState(false);
   const calendarRef = useRef<HTMLDivElement>(null);
+  const [selectedPeriod, setSelectedPeriod] = useState<
+    '7d' | '30d' | '90d' | 'custom'
+  >('30d');
 
   // 날짜 범위 필터 - 초기값은 null, 데이터 로드 후 설정
   const [dateRange, setDateRange] = useState<{
@@ -233,6 +236,7 @@ export default function WordCloud() {
                   }
                   onChange={(item: any) => {
                     setDateRange(item.selection);
+                    setSelectedPeriod('custom');
                   }}
                   months={1}
                   direction="horizontal"
@@ -242,27 +246,15 @@ export default function WordCloud() {
               <div className="bg-slate-900 p-2 flex justify-end gap-2 border-t border-slate-700">
                 <button
                   onClick={() => {
-                    // 데이터 기준 최근 7일
-                    if (dataLatest) {
-                      const startDate = new Date(dataLatest);
-                      startDate.setDate(startDate.getDate() - 7);
-                      setDateRange({
-                        startDate,
-                        endDate: dataLatest,
-                        key: 'selection',
-                      });
-                    }
-                  }}
-                  className="px-2 py-1 text-xs rounded bg-slate-700 text-slate-300 hover:bg-slate-600"
-                >
-                  7일
-                </button>
-                <button
-                  onClick={() => {
                     // 초기화: 데이터 기준 최근 30일
                     setDateRange(null);
+                    setSelectedPeriod('30d');
                   }}
-                  className="px-2 py-1 text-xs rounded bg-slate-700 text-slate-300 hover:bg-slate-600"
+                  className={`px-2 py-1 text-xs rounded ${
+                    selectedPeriod === '30d'
+                      ? 'bg-blue-600 text-white'
+                      : 'bg-slate-700 text-slate-300 hover:bg-slate-600'
+                  }`}
                 >
                   30일(초기화)
                 </button>
@@ -278,8 +270,13 @@ export default function WordCloud() {
                         key: 'selection',
                       });
                     }
+                    setSelectedPeriod('90d');
                   }}
-                  className="px-2 py-1 text-xs rounded bg-slate-700 text-slate-300 hover:bg-slate-600"
+                  className={`px-2 py-1 text-xs rounded ${
+                    selectedPeriod === '90d'
+                      ? 'bg-blue-600 text-white'
+                      : 'bg-slate-700 text-slate-300 hover:bg-slate-600'
+                  }`}
                 >
                   90일
                 </button>

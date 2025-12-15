@@ -34,6 +34,9 @@ export default function TopPosts() {
   } | null>(null);
   const [showCalendar, setShowCalendar] = useState(false);
   const calendarRef = useRef<HTMLDivElement>(null);
+  const [selectedPeriod, setSelectedPeriod] = useState<
+    '7d' | '30d' | '90d' | 'custom'
+  >('30d');
 
   const [page, setPage] = useState(1);
   const [posts, setPosts] = useState<any[]>([]);
@@ -317,6 +320,7 @@ export default function TopPosts() {
                   onChange={(item: any) => {
                     setDateRange(item.selection);
                     setSelectedSpikeDate(null);
+                    setSelectedPeriod('custom');
                   }}
                   months={1}
                   direction="horizontal"
@@ -326,29 +330,16 @@ export default function TopPosts() {
               <div className="bg-slate-900 p-2 flex justify-end gap-2 border-t border-slate-700">
                 <button
                   onClick={() => {
-                    // 데이터 기준 최근 7일
-                    if (dataLatest) {
-                      const startDate = new Date(dataLatest);
-                      startDate.setDate(startDate.getDate() - 7);
-                      setDateRange({
-                        startDate,
-                        endDate: dataLatest,
-                        key: 'selection',
-                      });
-                    }
-                    setSelectedSpikeDate(null);
-                  }}
-                  className="px-2 py-1 text-xs rounded bg-slate-700 text-slate-300 hover:bg-slate-600"
-                >
-                  7일
-                </button>
-                <button
-                  onClick={() => {
                     // 초기화: 데이터 기준 최근 30일
                     setDateRange(null);
                     setSelectedSpikeDate(null);
+                    setSelectedPeriod('30d');
                   }}
-                  className="px-2 py-1 text-xs rounded bg-slate-700 text-slate-300 hover:bg-slate-600"
+                  className={`px-2 py-1 text-xs rounded ${
+                    selectedPeriod === '30d'
+                      ? 'bg-blue-600 text-white'
+                      : 'bg-slate-700 text-slate-300 hover:bg-slate-600'
+                  }`}
                 >
                   30일(초기화)
                 </button>
@@ -365,8 +356,13 @@ export default function TopPosts() {
                       });
                     }
                     setSelectedSpikeDate(null);
+                    setSelectedPeriod('90d');
                   }}
-                  className="px-2 py-1 text-xs rounded bg-slate-700 text-slate-300 hover:bg-slate-600"
+                  className={`px-2 py-1 text-xs rounded ${
+                    selectedPeriod === '90d'
+                      ? 'bg-blue-600 text-white'
+                      : 'bg-slate-700 text-slate-300 hover:bg-slate-600'
+                  }`}
                 >
                   90일
                 </button>

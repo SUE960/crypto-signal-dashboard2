@@ -1,7 +1,7 @@
 'use client';
 
-import { useEffect, useState, useMemo } from 'react';
-import { DateRangePicker } from 'react-date-range';
+import { useEffect, useState, useMemo, useRef } from 'react';
+import { DateRange } from 'react-date-range';
 import Wordcloud from '@visx/wordcloud/lib/Wordcloud';
 import { scaleLog } from '@visx/scale';
 import { Text } from '@visx/text';
@@ -32,10 +32,27 @@ export default function KeywordAnalysis() {
 
   const [keywords, setKeywords] = useState<WordData[]>([]);
   const [sentiment, setSentiment] = useState('all');
-  const [range, setRange] = useState('30d');
   const [mounted, setMounted] = useState(false);
   const [showCalendar, setShowCalendar] = useState(false);
   const [selectedWord, setSelectedWord] = useState<string | null>(null);
+  const calendarRef = useRef<HTMLDivElement>(null);
+  const [selectedPeriod, setSelectedPeriod] = useState<
+    '7d' | '30d' | '90d' | 'custom'
+  >('30d');
+
+  // 날짜 범위 필터 - 초기값은 null, 데이터 로드 후 설정
+  const [dateRange, setDateRange] = useState<{
+    startDate: Date;
+    endDate: Date;
+    key: string;
+  } | null>(null);
+
+  // API에서 반환된 실제 조회 기간
+  const [dataFrom, setDataFrom] = useState<Date | null>(null);
+  const [dataTo, setDataTo] = useState<Date | null>(null);
+
+  // 전체 데이터 범위
+  const [dataLatest, setDataLatest] = useState<Date | null>(null);
 
   // 컴포넌트 마운트 시 선택된 키워드 초기화
   useEffect(() => {
@@ -44,19 +61,28 @@ export default function KeywordAnalysis() {
     setSelectedKeyword(''); // Context도 초기화
   }, []);
 
-  const [customRange, setCustomRange] = useState([
-    {
-      startDate: new Date(Date.now() - 30 * 86400000),
-      endDate: new Date(),
-      key: 'selection',
-    },
-  ]);
-
+  // 달력 외부 클릭 시 닫기
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (
+        calendarRef.current &&
+        !calendarRef.current.contains(event.target as Node)
+      ) {
+        setShowCalendar(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
 
   const fetchData = async () => {
-    let url = `/api/community/wordcloud?sentiment=${sentiment}&range=${range}`;
-    if (range === 'custom') {
-      url += `&from=${customRange[0].startDate.toISOString()}&to=${customRange[0].endDate.toISOString()}`;
+    let url = `/api/community/wordcloud?sentiment=${sentiment}`;
+
+    // dateRange가 있으면 custom, 없으면 기본 30일
+    if (dateRange) {
+      url += `&range=custom&from=${dateRange.startDate.toISOString()}&to=${dateRange.endDate.toISOString()}`;
+    } else {
+      url += `&range=30d`;
     }
 
     const res = await fetch(url);
@@ -66,6 +92,11 @@ export default function KeywordAnalysis() {
       setKeywords([]);
       return;
     }
+
+    // API에서 반환된 실제 조회 기간 저장
+    if (json.from) setDataFrom(new Date(json.from));
+    if (json.to) setDataTo(new Date(json.to));
+    if (json.dataLatest) setDataLatest(new Date(json.dataLatest));
 
     setKeywords(
       json.keywords.map((k: any) => ({
@@ -80,13 +111,7 @@ export default function KeywordAnalysis() {
 
   useEffect(() => {
     fetchData();
-  }, [sentiment, range, customRange]);
-
-  useEffect(() => {
-    if (range === 'custom') {
-      setShowCalendar(true);
-    }
-  }, [range]);
+  }, [sentiment, dateRange]);
 
   const getColor = (word: WordData) => {
     if (sentiment === 'positive') return '#22c55e';
@@ -109,11 +134,6 @@ export default function KeywordAnalysis() {
   }, [keywords]);
 
   const fontSizeSetter = (datum: WordData) => fontScale(datum.value);
-
-  const handleApplyDate = () => {
-    setShowCalendar(false);
-    fetchData();
-  };
 
   // Bar Chart용 데이터 (선택된 단어가 있으면 해당 단어만, 없으면 상위 10개)
   const barChartData = useMemo(() => {
@@ -173,6 +193,191 @@ export default function KeywordAnalysis() {
 
       {/* 상단 필터 */}
       <div className="flex flex-wrap items-center gap-4 mb-4">
+        {/* 기간 달력 필터 */}
+        <div className="relative" ref={calendarRef}>
+          <button
+            onClick={() => setShowCalendar(!showCalendar)}
+            className="flex items-center gap-2 px-3 py-2 rounded-lg bg-slate-800 border border-slate-700 text-white text-sm hover:bg-slate-700 transition-colors"
+          >
+            📅{' '}
+            {dataFrom && dataTo
+              ? `${dataFrom.toLocaleDateString('ko-KR', {
+                  month: 'short',
+                  day: 'numeric',
+                })} ~ ${dataTo.toLocaleDateString('ko-KR', {
+                  month: 'short',
+                  day: 'numeric',
+                })}`
+              : '기간 선택'}
+          </button>
+
+          {showCalendar && (
+            <div className="absolute top-full left-0 mt-2 z-50 rounded-xl overflow-hidden shadow-2xl border border-slate-700">
+              <style jsx global>{`
+                .keyword-calendar .rdrCalendarWrapper,
+                .keyword-calendar .rdrDateDisplayWrapper,
+                .keyword-calendar .rdrMonthAndYearWrapper {
+                  background: #0f172a !important;
+                }
+                .keyword-calendar .rdrMonthAndYearPickers select {
+                  background: #1e293b !important;
+                  color: #e2e8f0 !important;
+                  border: 1px solid #334155 !important;
+                }
+                .keyword-calendar .rdrMonthAndYearPickers select option {
+                  background: #1e293b !important;
+                  color: #e2e8f0 !important;
+                }
+                .keyword-calendar .rdrNextPrevButton {
+                  background: #1e293b !important;
+                }
+                .keyword-calendar .rdrNextPrevButton:hover {
+                  background: #334155 !important;
+                }
+                .keyword-calendar .rdrNextPrevButton i {
+                  border-color: transparent transparent transparent #94a3b8 !important;
+                }
+                .keyword-calendar .rdrPprevButton i {
+                  border-color: transparent #94a3b8 transparent transparent !important;
+                }
+                .keyword-calendar .rdrMonth {
+                  background: #0f172a !important;
+                }
+                .keyword-calendar .rdrWeekDay {
+                  color: #64748b !important;
+                }
+                .keyword-calendar .rdrDay {
+                  color: #e2e8f0 !important;
+                }
+                .keyword-calendar .rdrDayNumber span {
+                  color: #e2e8f0 !important;
+                }
+                .keyword-calendar .rdrDayPassive .rdrDayNumber span {
+                  color: #475569 !important;
+                }
+                .keyword-calendar .rdrDayToday .rdrDayNumber span:after {
+                  background: #3b82f6 !important;
+                }
+                .keyword-calendar .rdrDayDisabled {
+                  background-color: #1e293b !important;
+                }
+                .keyword-calendar .rdrDayDisabled .rdrDayNumber span {
+                  color: #475569 !important;
+                }
+                .keyword-calendar .rdrDateDisplayItem {
+                  background: #1e293b !important;
+                  border-color: #334155 !important;
+                }
+                .keyword-calendar .rdrDateDisplayItem input {
+                  color: #e2e8f0 !important;
+                }
+                .keyword-calendar .rdrDateDisplayItemActive {
+                  border-color: #3b82f6 !important;
+                }
+                .keyword-calendar .rdrInRange,
+                .keyword-calendar .rdrStartEdge,
+                .keyword-calendar .rdrEndEdge {
+                  background: #3b82f6 !important;
+                }
+                .keyword-calendar .rdrDayStartPreview,
+                .keyword-calendar .rdrDayInPreview,
+                .keyword-calendar .rdrDayEndPreview {
+                  border-color: #3b82f6 !important;
+                }
+              `}</style>
+              <div className="keyword-calendar">
+                <DateRange
+                  ranges={
+                    dateRange
+                      ? [dateRange]
+                      : [
+                          {
+                            startDate: dataFrom || new Date(),
+                            endDate: dataTo || new Date(),
+                            key: 'selection',
+                          },
+                        ]
+                  }
+                  onChange={(item: any) => {
+                    setDateRange(item.selection);
+                    setSelectedPeriod('custom');
+                  }}
+                  months={1}
+                  direction="horizontal"
+                  rangeColors={['#3b82f6']}
+                />
+              </div>
+              <div className="bg-slate-900 p-2 flex justify-end gap-2 border-t border-slate-700">
+                <button
+                  onClick={() => {
+                    // 데이터 기준 최근 7일
+                    if (dataLatest) {
+                      const startDate = new Date(dataLatest);
+                      startDate.setDate(startDate.getDate() - 7);
+                      setDateRange({
+                        startDate,
+                        endDate: dataLatest,
+                        key: 'selection',
+                      });
+                    }
+                    setSelectedPeriod('7d');
+                  }}
+                  className={`px-2 py-1 text-xs rounded ${
+                    selectedPeriod === '7d'
+                      ? 'bg-blue-600 text-white'
+                      : 'bg-slate-700 text-slate-300 hover:bg-slate-600'
+                  }`}
+                >
+                  7일
+                </button>
+                <button
+                  onClick={() => {
+                    // 초기화: 데이터 기준 최근 30일
+                    setDateRange(null);
+                    setSelectedPeriod('30d');
+                  }}
+                  className={`px-2 py-1 text-xs rounded ${
+                    selectedPeriod === '30d'
+                      ? 'bg-blue-600 text-white'
+                      : 'bg-slate-700 text-slate-300 hover:bg-slate-600'
+                  }`}
+                >
+                  30일(초기화)
+                </button>
+                <button
+                  onClick={() => {
+                    // 데이터 기준 최근 90일
+                    if (dataLatest) {
+                      const startDate = new Date(dataLatest);
+                      startDate.setDate(startDate.getDate() - 90);
+                      setDateRange({
+                        startDate,
+                        endDate: dataLatest,
+                        key: 'selection',
+                      });
+                    }
+                    setSelectedPeriod('90d');
+                  }}
+                  className={`px-2 py-1 text-xs rounded ${
+                    selectedPeriod === '90d'
+                      ? 'bg-blue-600 text-white'
+                      : 'bg-slate-700 text-slate-300 hover:bg-slate-600'
+                  }`}
+                >
+                  90일
+                </button>
+                <button
+                  onClick={() => setShowCalendar(false)}
+                  className="px-2 py-1 text-xs rounded bg-blue-600 text-white hover:bg-blue-500"
+                >
+                  확인
+                </button>
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* 감성 필터 */}
         <select
           className="px-3 py-2 rounded-lg bg-slate-800 border border-slate-700 text-white"
           value={sentiment}
@@ -182,16 +387,6 @@ export default function KeywordAnalysis() {
           <option value="positive">긍정</option>
           <option value="neutral">중립</option>
           <option value="negative">부정</option>
-        </select>
-
-        <select
-          className="px-3 py-2 rounded-lg bg-slate-800 border border-slate-700 text-white"
-          value={range}
-          onChange={(e) => setRange(e.target.value)}
-        >
-          <option value="7d">최근 7일</option>
-          <option value="30d">최근 30일</option>
-          <option value="custom">직접 선택</option>
         </select>
 
         {selectedWord && (
@@ -224,130 +419,6 @@ export default function KeywordAnalysis() {
           <span className="text-slate-300">부정 ({overallStats.negRate}%)</span>
         </div>
       </div>
-
-      {/* Custom Range */}
-      {showCalendar && range === 'custom' && (
-        <div className="mb-6 relative z-50">
-          <div className="bg-slate-800 rounded-xl shadow-2xl p-5 inline-block border border-slate-700">
-            <div className="flex justify-between items-center mb-4">
-              <span className="text-white font-semibold text-lg">
-                📅 날짜 범위 선택
-              </span>
-              <button
-                onClick={() => {
-                  setShowCalendar(false);
-                  setRange('30d');
-                }}
-                className="text-slate-400 hover:text-white p-2 rounded-lg hover:bg-slate-700 transition-colors"
-                title="닫기"
-              >
-                ✕
-              </button>
-            </div>
-            <style jsx global>{`
-              .rdrCalendarWrapper {
-                background: #1e293b !important;
-                color: white !important;
-              }
-              .rdrDateDisplayWrapper {
-                background: #334155 !important;
-              }
-              .rdrDateDisplayItem {
-                background: #475569 !important;
-                border-color: #64748b !important;
-              }
-              .rdrDateDisplayItem input {
-                color: white !important;
-              }
-              .rdrMonthAndYearWrapper {
-                background: #1e293b !important;
-              }
-              .rdrMonthAndYearPickers select {
-                color: white !important;
-                background: #334155 !important;
-              }
-              .rdrMonthAndYearPickers select option {
-                background: #334155 !important;
-              }
-              .rdrNextPrevButton {
-                background: #334155 !important;
-              }
-              .rdrNextPrevButton:hover {
-                background: #475569 !important;
-              }
-              .rdrNextPrevButton i {
-                border-color: transparent transparent transparent #94a3b8 !important;
-              }
-              .rdrPprevButton i {
-                border-color: transparent #94a3b8 transparent transparent !important;
-              }
-              .rdrMonth {
-                background: #1e293b !important;
-              }
-              .rdrWeekDay {
-                color: #64748b !important;
-              }
-              .rdrDay {
-                color: #e2e8f0 !important;
-              }
-              .rdrDayNumber span {
-                color: #e2e8f0 !important;
-              }
-              .rdrDayPassive .rdrDayNumber span {
-                color: #475569 !important;
-              }
-              .rdrDayToday .rdrDayNumber span:after {
-                background: #3b82f6 !important;
-              }
-              .rdrDayDisabled {
-                background-color: #1e293b !important;
-              }
-              .rdrDayDisabled .rdrDayNumber span {
-                color: #475569 !important;
-              }
-              .rdrSelected,
-              .rdrInRange,
-              .rdrStartEdge,
-              .rdrEndEdge {
-                background: #3b82f6 !important;
-              }
-              .rdrDayStartPreview,
-              .rdrDayInPreview,
-              .rdrDayEndPreview {
-                border-color: #60a5fa !important;
-              }
-              .rdrDefinedRangesWrapper {
-                display: none !important;
-              }
-            `}</style>
-            <DateRangePicker
-              ranges={customRange}
-              onChange={(item: any) => setCustomRange([item.selection])}
-              months={1}
-              direction="horizontal"
-              rangeColors={['#3b82f6']}
-              showDateDisplay={true}
-            />
-            <div className="mt-4 flex justify-end gap-3">
-              <button
-                onClick={() => {
-                  setShowCalendar(false);
-                  setRange('30d');
-                }}
-                className="px-4 py-2 bg-slate-700 text-white rounded-lg hover:bg-slate-600 transition-colors"
-              >
-                취소
-              </button>
-              <button
-                onClick={handleApplyDate}
-                className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-500 transition-colors font-medium"
-              >
-                적용
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
 
       {/* 메인 컨텐츠: WordCloud + Breakdown */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">

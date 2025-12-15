@@ -147,6 +147,9 @@ export default function SentimentTrend() {
   } | null>(null);
   const [showCalendar, setShowCalendar] = useState(false);
   const calendarRef = useRef<HTMLDivElement>(null);
+  const [selectedPeriod, setSelectedPeriod] = useState<
+    '7d' | '30d' | '90d' | 'custom'
+  >('30d');
 
   // 그래프 클릭으로 선택된 시점
   const [selectedPoint, setSelectedPoint] = useState<string | null>(null);
@@ -496,6 +499,7 @@ export default function SentimentTrend() {
                   onChange={(item: any) => {
                     setDateRange(item.selection);
                     setSelectedPoint(null);
+                    setSelectedPeriod('custom');
                   }}
                   months={1}
                   direction="horizontal"
@@ -508,23 +512,6 @@ export default function SentimentTrend() {
                     if (points.length > 0) {
                       const lastDate = new Date(points[points.length - 1].time);
                       const startDate = new Date(lastDate);
-                      startDate.setDate(startDate.getDate() - 7);
-                      setDateRange({
-                        startDate,
-                        endDate: lastDate,
-                        key: 'selection',
-                      });
-                    }
-                  }}
-                  className="px-2 py-1 text-xs rounded bg-slate-700 text-slate-300 hover:bg-slate-600"
-                >
-                  7일
-                </button>
-                <button
-                  onClick={() => {
-                    if (points.length > 0) {
-                      const lastDate = new Date(points[points.length - 1].time);
-                      const startDate = new Date(lastDate);
                       startDate.setDate(startDate.getDate() - 30);
                       setDateRange({
                         startDate,
@@ -532,8 +519,13 @@ export default function SentimentTrend() {
                         key: 'selection',
                       });
                     }
+                    setSelectedPeriod('30d');
                   }}
-                  className="px-2 py-1 text-xs rounded bg-slate-700 text-slate-300 hover:bg-slate-600"
+                  className={`px-2 py-1 text-xs rounded ${
+                    selectedPeriod === '30d'
+                      ? 'bg-violet-600 text-white'
+                      : 'bg-slate-700 text-slate-300 hover:bg-slate-600'
+                  }`}
                 >
                   30일(초기화)
                 </button>
@@ -549,8 +541,13 @@ export default function SentimentTrend() {
                         key: 'selection',
                       });
                     }
+                    setSelectedPeriod('90d');
                   }}
-                  className="px-2 py-1 text-xs rounded bg-slate-700 text-slate-300 hover:bg-slate-600"
+                  className={`px-2 py-1 text-xs rounded ${
+                    selectedPeriod === '90d'
+                      ? 'bg-violet-600 text-white'
+                      : 'bg-slate-700 text-slate-300 hover:bg-slate-600'
+                  }`}
                 >
                   90일
                 </button>

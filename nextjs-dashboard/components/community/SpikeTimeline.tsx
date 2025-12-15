@@ -73,6 +73,9 @@ export default function SpikeTimeline() {
   } | null>(null);
   const [showCalendar, setShowCalendar] = useState(false);
   const calendarRef = useRef<HTMLDivElement>(null);
+  const [selectedPeriod, setSelectedPeriod] = useState<
+    '30d' | '90d' | '180d' | 'custom'
+  >('180d');
 
   // -------------------------
   // Load spike data
@@ -390,6 +393,7 @@ export default function SpikeTimeline() {
                   onChange={(item: any) => {
                     setDateRange(item.selection);
                     setSelectedChartDate(null);
+                    setSelectedPeriod('custom');
                   }}
                   months={1}
                   direction="horizontal"
@@ -397,38 +401,6 @@ export default function SpikeTimeline() {
                 />
               </div>
               <div className="bg-slate-900 p-2 flex justify-end gap-2 border-t border-slate-700">
-                <button
-                  onClick={() => {
-                    // 전체 데이터 범위로 리셋
-                    if (points.length > 0) {
-                      setDateRange({
-                        startDate: new Date(points[0].time),
-                        endDate: new Date(points[points.length - 1].time),
-                        key: 'selection',
-                      });
-                    }
-                  }}
-                  className="px-2 py-1 text-xs rounded bg-slate-700 text-slate-300 hover:bg-slate-600"
-                >
-                  전체
-                </button>
-                <button
-                  onClick={() => {
-                    if (points.length > 0) {
-                      const lastDate = new Date(points[points.length - 1].time);
-                      const startDate = new Date(lastDate);
-                      startDate.setDate(startDate.getDate() - 7);
-                      setDateRange({
-                        startDate,
-                        endDate: lastDate,
-                        key: 'selection',
-                      });
-                    }
-                  }}
-                  className="px-2 py-1 text-xs rounded bg-slate-700 text-slate-300 hover:bg-slate-600"
-                >
-                  7일
-                </button>
                 <button
                   onClick={() => {
                     if (points.length > 0) {
@@ -441,8 +413,13 @@ export default function SpikeTimeline() {
                         key: 'selection',
                       });
                     }
+                    setSelectedPeriod('30d');
                   }}
-                  className="px-2 py-1 text-xs rounded bg-slate-700 text-slate-300 hover:bg-slate-600"
+                  className={`px-2 py-1 text-xs rounded ${
+                    selectedPeriod === '30d'
+                      ? 'bg-violet-600 text-white'
+                      : 'bg-slate-700 text-slate-300 hover:bg-slate-600'
+                  }`}
                 >
                   30일
                 </button>
@@ -458,8 +435,13 @@ export default function SpikeTimeline() {
                         key: 'selection',
                       });
                     }
+                    setSelectedPeriod('90d');
                   }}
-                  className="px-2 py-1 text-xs rounded bg-slate-700 text-slate-300 hover:bg-slate-600"
+                  className={`px-2 py-1 text-xs rounded ${
+                    selectedPeriod === '90d'
+                      ? 'bg-violet-600 text-white'
+                      : 'bg-slate-700 text-slate-300 hover:bg-slate-600'
+                  }`}
                 >
                   90일
                 </button>
@@ -476,8 +458,13 @@ export default function SpikeTimeline() {
                         key: 'selection',
                       });
                     }
+                    setSelectedPeriod('180d');
                   }}
-                  className="px-2 py-1 text-xs rounded bg-slate-700 text-slate-300 hover:bg-slate-600"
+                  className={`px-2 py-1 text-xs rounded ${
+                    selectedPeriod === '180d'
+                      ? 'bg-violet-600 text-white'
+                      : 'bg-slate-700 text-slate-300 hover:bg-slate-600'
+                  }`}
                 >
                   180일(초기화)
                 </button>
