@@ -155,12 +155,14 @@ const RealTimeChart: React.FC<RealTimeChartProps> = ({ dataPath }) => {
       }
       
       // 7일 범위를 찾지 못했거나 데이터가 적은 경우, 최신 데이터부터 표시
-      // 최소 50개 이상은 표시하도록 보장 (데이터가 50개 미만이면 전체 표시)
+      // 최신 데이터부터 최대한 많이 표시 (최소 50개 이상)
       const minDisplayCount = 50;
       if (sortedData.length <= minDisplayCount) {
         return sortedData; // 데이터가 적으면 전체 표시
       }
-      return sortedData.slice(-minDisplayCount); // 최신 50개 표시
+      // 최신 데이터부터 최대 200개까지 표시 (7일 범위에 맞춤)
+      const maxDisplayCount = Math.min(200, sortedData.length);
+      return sortedData.slice(-maxDisplayCount);
     }
     
     // 정렬 실패한 경우, 원본 데이터 반환
