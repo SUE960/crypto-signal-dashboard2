@@ -26,11 +26,11 @@ export default function TopPosts() {
     'all' | 'positive' | 'neutral' | 'negative'
   >('all');
 
-  const [range, setRange] = useState<'7d' | '30d' | 'custom'>('30d');
+  const [range, setRange] = useState<'7d' | '30d' | 'custom'>('7d');
   const [showCalendar, setShowCalendar] = useState(false);
   const [customRange, setCustomRange] = useState([
     {
-      startDate: new Date(Date.now() - 30 * 86400000),
+      startDate: new Date(Date.now() - 7 * 86400000),
       endDate: new Date(),
       key: 'selection',
     },

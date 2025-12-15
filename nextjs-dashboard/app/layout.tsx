@@ -27,7 +27,11 @@ export const metadata: Metadata = {
   description: 'Real-time Market Intelligence',
 };
 
-export default function RootLayout({ children }: { children: React.ReactNode }) {
+export default function RootLayout({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
   return (
     <html lang="en">
       <body className="bg-gray-950 text-white">
@@ -37,17 +41,26 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
             <Link href="/" className="hover:text-blue-400">
               Home
             </Link>
-            <Link href="/news" className="hover:text-blue-400">
-              News
-            </Link>
-            <Link href="/spike-points" className="hover:text-blue-400">
-              Spike Points
-            </Link>
-
             {/* 🔥 여기에 Community 메뉴 추가 */}
             <Link href="/community" className="hover:text-blue-400">
               Community
             </Link>
+            <a
+              href="https://graph-visualization2.vercel.app/"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="hover:text-blue-400"
+            >
+              Whale Transaction
+            </a>
+            <a
+              href="https://whale-arbitrage-qwodzy8wpnhpgxaxt23rj8.streamlit.app/"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="hover:text-blue-400"
+            >
+              Arbitrage Simulation
+            </a>
           </nav>
         </header>
 
