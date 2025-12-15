@@ -26,9 +26,11 @@ export async function GET(request: Request) {
     
     // 파일이 없으면 빈 배열 반환
     if (!dataPath) {
-      console.log('코인니스 데이터 파일을 찾을 수 없습니다.');
+      console.error('코인니스 데이터 파일을 찾을 수 없습니다. 시도한 경로:', possiblePaths);
       return NextResponse.json([]);
     }
+
+    console.log('뉴스 데이터 파일 경로:', dataPath);
 
     // CSV 파일 읽기
     const fileContent = fs.readFileSync(dataPath, 'utf-8');
@@ -37,6 +39,8 @@ export async function GET(request: Request) {
       skip_empty_lines: true,
       encoding: 'utf-8'
     });
+
+    console.log(`총 ${records.length}개의 뉴스 레코드를 읽었습니다.`);
 
     // 최신 뉴스부터 정렬 (timestamp 기준 내림차순)
     const sortedNews = records

@@ -35,20 +35,20 @@ const NewsListPanel: React.FC = () => {
       
       if (!response.ok) {
         console.error('API 응답 실패:', response.status);
-        // API 실패 시 더미 데이터
-        setNews(generateDummyNews());
+        setNews([]);
+        return;
+      }
+      
+      const data = await response.json();
+      if (Array.isArray(data) && data.length > 0) {
+        setNews(data);
       } else {
-        const data = await response.json();
-        if (Array.isArray(data) && data.length > 0) {
-          setNews(data);
-        } else {
-          console.warn('뉴스 데이터가 비어있습니다. 더미 데이터를 사용합니다.');
-          setNews(generateDummyNews());
-        }
+        console.warn('뉴스 데이터가 비어있습니다.');
+        setNews([]);
       }
     } catch (error) {
       console.error('뉴스 로딩 실패:', error);
-      setNews(generateDummyNews());
+      setNews([]);
     } finally {
       setLoading(false);
     }
@@ -217,11 +217,19 @@ const NewsListPanel: React.FC = () => {
 
       {/* 뉴스 리스트 */}
       <div className="space-y-3">
-        {filteredNews.map((item, index) => (
-          <div
+        {filteredNews.length === 0 ? (
+          <div className="text-center py-12 text-gray-400">
+            <p className="text-lg mb-2">뉴스 데이터가 없습니다</p>
+            <p className="text-sm">새로고침 버튼을 눌러 다시 시도해주세요</p>
+          </div>
+        ) : (
+          filteredNews.map((item, index) => (
+          <a
             key={index}
-            className="bg-gray-900 hover:bg-gray-850 border border-gray-800 hover:border-gray-700 rounded-xl p-4 transition-all cursor-pointer group"
-            onClick={() => window.open(item.link, '_blank')}
+            href={item.link}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="bg-gray-900 hover:bg-gray-850 border border-gray-800 hover:border-gray-700 rounded-xl p-4 transition-all cursor-pointer group block"
           >
             <div className="flex items-start justify-between gap-4">
               {/* 왼쪽: 컨텐츠 */}
@@ -288,8 +296,9 @@ const NewsListPanel: React.FC = () => {
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
               </svg>
             </div>
-          </div>
-        ))}
+          </a>
+        ))
+        )}
       </div>
 
       {/* 더보기 버튼 */}
