@@ -155,9 +155,12 @@ const RealTimeChart: React.FC<RealTimeChartProps> = ({ dataPath }) => {
       }
       
       // 7일 범위를 찾지 못했거나 데이터가 적은 경우, 최신 데이터부터 표시
-      // 최소 50개 이상은 표시하도록 보장
-      const minDisplayCount = Math.min(50, sortedData.length);
-      return sortedData.slice(-Math.max(minDisplayCount, sortedData.length));
+      // 최소 50개 이상은 표시하도록 보장 (데이터가 50개 미만이면 전체 표시)
+      const minDisplayCount = 50;
+      if (sortedData.length <= minDisplayCount) {
+        return sortedData; // 데이터가 적으면 전체 표시
+      }
+      return sortedData.slice(-minDisplayCount); // 최신 50개 표시
     }
     
     // 정렬 실패한 경우, 원본 데이터 반환
@@ -179,8 +182,8 @@ const RealTimeChart: React.FC<RealTimeChartProps> = ({ dataPath }) => {
     });
   }, [data.length, filteredData.length, timeRange, selectedDate, viewStartIndex]);
 
-  // 필터링된 데이터가 없으면 원본 데이터 사용 (최소한 뭔가 표시)
-  const displayData = filteredData.length > 0 ? filteredData : data;
+  // 필터링된 데이터가 없으면 원본 데이터 사용, 그것도 없으면 더미 데이터 사용
+  let displayData = filteredData.length > 0 ? filteredData : (data.length > 0 ? data : generateDummyData(timeRange));
 
   // 데이터와 Spike 포인트 매칭
   const dataWithSpikes = displayData.map((point) => {
@@ -226,7 +229,9 @@ const RealTimeChart: React.FC<RealTimeChartProps> = ({ dataPath }) => {
     const dataPoints: ChartDataPoint[] = [];
     const now = new Date();
 
-    for (let i = days * 24; i >= 0; i -= 24) { // 일별 데이터
+    // 시간별 데이터 생성 (더 많은 데이터 포인트)
+    const hours = days * 24;
+    for (let i = hours; i >= 0; i -= 1) { // 시간별 데이터
       const date = new Date(now);
       date.setHours(date.getHours() - i);
 
@@ -239,7 +244,7 @@ const RealTimeChart: React.FC<RealTimeChartProps> = ({ dataPath }) => {
         date: date.toLocaleDateString('ko-KR', { 
           month: 'numeric', 
           day: 'numeric',
-          ...(range === '90d' ? {} : { hour: '2-digit' })
+          hour: '2-digit'
         }),
         whale_tx_count: Math.round(baseWhale + Math.random() * 40),
         whale_volume_sum: Math.round((baseWhale + Math.random() * 50) * 150),
