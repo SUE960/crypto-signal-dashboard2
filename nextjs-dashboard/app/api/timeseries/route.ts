@@ -224,7 +224,7 @@ export async function GET(request: Request) {
       }
     });
 
-    // 배열로 변환하고 정렬
+    // 배열로 변환하고 정렬 (최신 데이터부터)
     const result: ChartDataPoint[] = Array.from(timeMap.values())
       .sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime())
       .filter((point) => {
@@ -232,7 +232,14 @@ export async function GET(request: Request) {
         return point.whale_tx_count > 0 || point.btc_close > 0 || point.eth_close > 0;
       });
 
-    return NextResponse.json(result);
+    // 최신 데이터부터 반환 (내림차순 정렬)
+    const sortedResult = result.sort((a, b) => 
+      new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()
+    );
+
+    console.log(`Timeseries API: ${sortedResult.length}개 데이터 반환 (최신: ${sortedResult[0]?.timestamp}, 최 old: ${sortedResult[sortedResult.length - 1]?.timestamp})`);
+
+    return NextResponse.json(sortedResult);
   } catch (error: any) {
     console.error('Timeseries 데이터 로딩 오류:', error);
     return NextResponse.json(

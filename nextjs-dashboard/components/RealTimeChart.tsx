@@ -85,7 +85,7 @@ const RealTimeChart: React.FC<RealTimeChartProps> = ({ dataPath }) => {
       const response = await fetch(`/api/timeseries?range=${timeRange}`);
       
       if (!response.ok) {
-        throw new Error('데이터 로딩 실패');
+        throw new Error(`데이터 로딩 실패: ${response.status} ${response.statusText}`);
       }
       
       const jsonData = await response.json();
@@ -96,17 +96,16 @@ const RealTimeChart: React.FC<RealTimeChartProps> = ({ dataPath }) => {
       });
       
       if (Array.isArray(jsonData) && jsonData.length > 0) {
+        // 실제 데이터 사용
         setData(jsonData);
+        console.log('✅ 실제 데이터 로드 완료:', jsonData.length, '개');
       } else {
-        console.warn('API에서 빈 데이터를 받았습니다. 더미 데이터를 사용합니다.');
-        setData(generateDummyData(timeRange));
+        console.error('❌ API에서 빈 데이터를 받았습니다.');
+        setData([]); // 빈 배열로 설정 (더미 데이터 사용 안 함)
       }
     } catch (error) {
-      console.error('데이터 로딩 중 오류:', error);
-      // 에러 시 더미 데이터 사용
-      const dummyData = generateDummyData(timeRange);
-      console.log('더미 데이터 생성:', dummyData.length, '개');
-      setData(dummyData);
+      console.error('❌ 데이터 로딩 중 오류:', error);
+      setData([]); // 에러 시에도 빈 배열로 설정 (더미 데이터 사용 안 함)
     } finally {
       setLoading(false);
     }
@@ -116,7 +115,8 @@ const RealTimeChart: React.FC<RealTimeChartProps> = ({ dataPath }) => {
   const getFilteredData = () => {
     if (data.length === 0) return [];
     
-    // 데이터를 시간순으로 정렬 (오름차순)
+    // API에서 이미 최신 데이터부터 정렬되어 오므로, 그대로 사용
+    // 필요시 시간순으로 재정렬 (오름차순)
     const sortedData = [...data].sort((a, b) => 
       new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime()
     );
@@ -137,12 +137,13 @@ const RealTimeChart: React.FC<RealTimeChartProps> = ({ dataPath }) => {
       return sortedData.slice(viewStartIndex);
     }
     
-    // 기본값: 가장 최신 데이터부터 표시
-    // 최신 날짜 기준으로 7일 전까지의 데이터만 표시하되, 데이터가 적으면 전체 표시
+    // 기본값: 가장 최신 데이터부터 표시 (7일 범위)
+    // 최신 날짜 기준으로 7일 전까지의 데이터만 표시
     if (sortedData.length > 0) {
       const latestDate = new Date(sortedData[sortedData.length - 1].timestamp);
       const sevenDaysAgo = new Date(latestDate);
       sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+      sevenDaysAgo.setHours(0, 0, 0, 0);
       
       const sevenDaysAgoTime = sevenDaysAgo.getTime();
       const startIndex = sortedData.findIndex(
@@ -154,15 +155,9 @@ const RealTimeChart: React.FC<RealTimeChartProps> = ({ dataPath }) => {
         return sortedData.slice(startIndex);
       }
       
-      // 7일 범위를 찾지 못했거나 데이터가 적은 경우, 최신 데이터부터 표시
-      // 최신 데이터부터 최대한 많이 표시 (최소 50개 이상)
-      const minDisplayCount = 50;
-      if (sortedData.length <= minDisplayCount) {
-        return sortedData; // 데이터가 적으면 전체 표시
-      }
-      // 최신 데이터부터 최대 200개까지 표시 (7일 범위에 맞춤)
-      const maxDisplayCount = Math.min(200, sortedData.length);
-      return sortedData.slice(-maxDisplayCount);
+      // 7일 범위를 찾지 못한 경우, 최신 데이터부터 최대 200개 표시
+      // 또는 데이터가 적으면 전체 표시
+      return sortedData.slice(-Math.min(200, sortedData.length));
     }
     
     // 정렬 실패한 경우, 원본 데이터 반환
@@ -184,8 +179,8 @@ const RealTimeChart: React.FC<RealTimeChartProps> = ({ dataPath }) => {
     });
   }, [data.length, filteredData.length, timeRange, selectedDate, viewStartIndex]);
 
-  // 필터링된 데이터가 없으면 원본 데이터 사용, 그것도 없으면 더미 데이터 사용
-  let displayData = filteredData.length > 0 ? filteredData : (data.length > 0 ? data : generateDummyData(timeRange));
+  // 필터링된 데이터가 없으면 원본 데이터 사용 (더미 데이터 사용 안 함)
+  let displayData = filteredData.length > 0 ? filteredData : data;
 
   // 데이터와 Spike 포인트 매칭
   const dataWithSpikes = displayData.map((point) => {
