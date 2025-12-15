@@ -26,16 +26,44 @@ export async function GET(request: Request) {
       }
     }
     
-    // 파일이 없으면 빈 배열 반환
+    // 파일이 없으면 빈 배열 반환 (디버깅 정보 포함)
     if (!dataPath) {
-      console.error('코인니스 데이터 파일을 찾을 수 없습니다. 시도한 경로:', possiblePaths);
-      return NextResponse.json([]);
+      const debugInfo = {
+        error: '코인니스 데이터 파일을 찾을 수 없습니다',
+        triedPaths: possiblePaths.map(p => ({
+          path: p,
+          exists: fs.existsSync(p),
+          cwd: process.cwd()
+        })),
+        env: process.env.NODE_ENV
+      };
+      console.error('뉴스 데이터 파일 찾기 실패:', JSON.stringify(debugInfo, null, 2));
+      
+      // 디버깅 정보를 응답에 포함 (개발 환경에서만)
+      return NextResponse.json({
+        error: '데이터 파일을 찾을 수 없습니다',
+        debug: process.env.NODE_ENV === 'development' ? debugInfo : undefined,
+        data: []
+      });
     }
 
     console.log('뉴스 데이터 파일 경로:', dataPath);
+    console.log('현재 작업 디렉토리:', process.cwd());
+    console.log('환경:', process.env.NODE_ENV);
 
     // CSV 파일 읽기
-    const fileContent = fs.readFileSync(dataPath, 'utf-8');
+    let fileContent;
+    try {
+      fileContent = fs.readFileSync(dataPath, 'utf-8');
+      console.log('파일 읽기 성공, 크기:', fileContent.length, 'bytes');
+    } catch (readError) {
+      console.error('파일 읽기 실패:', readError);
+      return NextResponse.json({
+        error: '파일 읽기 실패',
+        message: readError instanceof Error ? readError.message : 'Unknown error',
+        data: []
+      });
+    }
     const records = parse(fileContent, {
       columns: true,
       skip_empty_lines: true,
