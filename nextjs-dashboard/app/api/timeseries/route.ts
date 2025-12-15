@@ -101,8 +101,9 @@ export async function GET(request: Request) {
     const processedWhale = whaleData
       .map((row: any) => {
         const ts = parseTimestamp(row.Time || row.timestamp);
-        if (!ts || ts < cutoffDate) return null;
+        if (!ts) return null;
 
+        // 날짜 필터링은 나중에 적용 (데이터가 있으면 최신부터 표시)
         return {
           timestamp: ts,
           tx_count: parseFloat(row.frequency || row.tx_frequency || '0') || 0,
@@ -116,11 +117,13 @@ export async function GET(request: Request) {
     const processedBtc = btcPriceData
       .map((row: any) => {
         const ts = parseTimestamp(row.timestamp || row.Time || row.date);
-        if (!ts || ts < cutoffDate) return null;
+        if (!ts) return null;
 
-        const price = parseFloat(row.close || row.price || row.Close || '0');
+        // close_price 컬럼명 추가 (실제 CSV 파일 컬럼명)
+        const price = parseFloat(row.close_price || row.close || row.price || row.Close || '0');
         if (!price || price === 0) return null;
 
+        // 날짜 필터링은 나중에 적용 (데이터가 있으면 최신부터 표시)
         return {
           timestamp: ts,
           close: price,
@@ -133,11 +136,13 @@ export async function GET(request: Request) {
     const processedEth = ethPriceData
       .map((row: any) => {
         const ts = parseTimestamp(row.timestamp || row.Time || row.date);
-        if (!ts || ts < cutoffDate) return null;
+        if (!ts) return null;
 
-        const price = parseFloat(row.close || row.price || row.Close || '0');
+        // close_price 컬럼명 추가 (실제 CSV 파일 컬럼명)
+        const price = parseFloat(row.close_price || row.close || row.price || row.Close || '0');
         if (!price || price === 0) return null;
 
+        // 날짜 필터링은 나중에 적용 (데이터가 있으면 최신부터 표시)
         return {
           timestamp: ts,
           close: price,
@@ -232,20 +237,39 @@ export async function GET(request: Request) {
       }
     });
 
-    // 배열로 변환하고 정렬 (최신 데이터부터)
-    const result: ChartDataPoint[] = Array.from(timeMap.values())
+    // 배열로 변환하고 정렬
+    let result: ChartDataPoint[] = Array.from(timeMap.values())
       .sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime())
       .filter((point) => {
         // 최소한 하나의 데이터가 있어야 함
         return point.whale_tx_count > 0 || point.btc_close > 0 || point.eth_close > 0;
       });
 
+    // 날짜 필터링 적용 (최신 데이터부터 표시하되, 범위 내 데이터만)
+    if (result.length > 0) {
+      const latestDate = new Date(result[result.length - 1].timestamp);
+      const startDate = new Date(latestDate);
+      startDate.setDate(startDate.getDate() - days);
+      
+      result = result.filter((point) => {
+        const pointDate = new Date(point.timestamp);
+        return pointDate >= startDate;
+      });
+    }
+
     // 최신 데이터부터 반환 (내림차순 정렬)
     const sortedResult = result.sort((a, b) => 
       new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()
     );
 
-    console.log(`Timeseries API: ${sortedResult.length}개 데이터 반환 (최신: ${sortedResult[0]?.timestamp}, 최 old: ${sortedResult[sortedResult.length - 1]?.timestamp})`);
+    console.log(`Timeseries API: ${sortedResult.length}개 데이터 반환`);
+    console.log(`  고래 데이터: ${processedWhale.length}개`);
+    console.log(`  BTC 데이터: ${processedBtc.length}개`);
+    console.log(`  ETH 데이터: ${processedEth.length}개`);
+    if (sortedResult.length > 0) {
+      console.log(`  최신: ${sortedResult[0]?.timestamp}`);
+      console.log(`  최 old: ${sortedResult[sortedResult.length - 1]?.timestamp}`);
+    }
 
     return NextResponse.json(sortedResult);
   } catch (error: any) {
