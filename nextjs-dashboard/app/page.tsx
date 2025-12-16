@@ -70,7 +70,7 @@ export default function Home() {
     },
     {
       id: 'news',
-      label: '지급\n뉴스',
+      label: '지금\n뉴스',
       content: <NewsListPanel />
     },
   ];
