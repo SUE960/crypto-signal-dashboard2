@@ -28,7 +28,8 @@ function loadCSV(relativeFile: string): any[] {
 // 시간 정규화 함수 (시간 단위로)
 function normalizeHour(timestamp: string): string {
   const date = new Date(timestamp);
-  date.setMinutes(0, 0, 0, 0);
+  date.setMinutes(0, 0, 0);
+  date.setMilliseconds(0);
   return date.toISOString();
 }
 
