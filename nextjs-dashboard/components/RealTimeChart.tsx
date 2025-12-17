@@ -111,6 +111,12 @@ const RealTimeChart: React.FC<RealTimeChartProps> = ({ dataPath }) => {
         첫번째데이터: Array.isArray(jsonData) && jsonData.length > 0 ? jsonData[0] : null,
         마지막데이터: Array.isArray(jsonData) && jsonData.length > 0 ? jsonData[jsonData.length - 1] : null
       });
+      // 객체 구조를 명확히 보기 위해 JSON.stringify 사용
+      if (Array.isArray(jsonData) && jsonData.length > 0) {
+        console.log('API 첫번째 데이터 상세:', JSON.stringify(jsonData[0], null, 2));
+      } else if (!Array.isArray(jsonData)) {
+        console.log('API 응답 데이터 상세 (배열 아님):', JSON.stringify(jsonData, null, 2));
+      }
       
       if (Array.isArray(jsonData) && jsonData.length > 0) {
         // 실제 데이터 사용
@@ -289,6 +295,11 @@ const RealTimeChart: React.FC<RealTimeChartProps> = ({ dataPath }) => {
       첫번째데이터: filteredData.length > 0 ? filteredData[0] : null,
       마지막데이터: filteredData.length > 0 ? filteredData[filteredData.length - 1] : null
     });
+    // 객체 구조를 명확히 보기 위해 JSON.stringify 사용
+    if (filteredData.length > 0) {
+      console.log('첫번째 데이터 상세:', JSON.stringify(filteredData[0], null, 2));
+      console.log('마지막 데이터 상세:', JSON.stringify(filteredData[filteredData.length - 1], null, 2));
+    }
   }, [data.length, filteredData.length, timeRange, selectedDate, viewStartIndex]);
 
   // 필터링된 데이터가 없으면 원본 데이터 사용 (더미 데이터 사용 안 함)

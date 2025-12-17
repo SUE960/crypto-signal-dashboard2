@@ -50,6 +50,12 @@ const NewsListPanel: React.FC = () => {
         hasError: data?.error,
         debug: data?.debug
       });
+      // 객체 구조를 명확히 보기 위해 JSON.stringify 사용
+      if (!Array.isArray(data)) {
+        console.log('API 응답 데이터 상세:', JSON.stringify(data, null, 2));
+      } else if (data.length > 0) {
+        console.log('API 응답 첫번째 항목:', JSON.stringify(data[0], null, 2));
+      }
       
       // 에러가 있는 경우에도 테스트 데이터가 포함되어 있을 수 있음
       if (data?.error && !Array.isArray(data)) {
